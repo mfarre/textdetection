@@ -300,7 +300,7 @@ IplImage * textDetection (IplImage *    input,  IplImage* prev_input, bool dark_
     strokeWidthTransform ( edgeImage, gradientX, gradientY, dark_on_light, SWTImage, rays,denom_pi_swt_acceptation_angle );
     SWTMedianFilter ( SWTImage, rays );
 
-/*   IplImage * output2 =
+   IplImage * output2 =
             cvCreateImage ( cvGetSize ( input ), IPL_DEPTH_32F, 1 );
     normalizeImage (SWTImage, output2);
     IplImage * saveSWT =
@@ -308,7 +308,7 @@ IplImage * textDetection (IplImage *    input,  IplImage* prev_input, bool dark_
     cvConvertScale(output2, saveSWT, 255, 0);
     cvSaveImage ( "SWT.png", saveSWT);
     cvReleaseImage ( &output2 );
-    cvReleaseImage( &saveSWT );*/
+    cvReleaseImage( &saveSWT );
 
     // Calculate legally connect components from SWT and gradient image.
     // return type is a vector of vectors, where each outer vector is a component and
@@ -327,11 +327,11 @@ IplImage * textDetection (IplImage *    input,  IplImage* prev_input, bool dark_
 
 
 
-/*    IplImage * output3 =
+    IplImage * output3 =
             cvCreateImage ( cvGetSize ( input ), 8U, 3 );
     renderComponentsWithBoxes (SWTImage, validComponents, compBB, output3);
     cvSaveImage ( "components.png",output3);
-    cvReleaseImage ( &output3 );*/
+    cvReleaseImage ( &output3 );
 
 
 
@@ -415,7 +415,11 @@ void strokeWidthTransform (IplImage * edgeImage,
                         pnew.x = curPixX;
                         pnew.y = curPixY;
                         points.push_back(pnew);
-
+			if(points.size()>=2)
+			{
+			  if(abs(points[0].y - points[points.size()-1].y) > 50)
+				break;
+			}
                         if (CV_IMAGE_ELEM ( edgeImage, uchar, curPixY, curPixX) > 0) {
                             r.q = pnew;
                             // dot product
@@ -456,6 +460,7 @@ void strokeWidthTransform (IplImage * edgeImage,
 
 void SWTMedianFilter (IplImage * SWTImage,
                      std::vector<Ray> & rays) {
+    
     for (std::vector<Ray>::iterator rit = rays.begin(); rit != rays.end(); rit++) {
         for (std::vector<Point2d>::iterator pit = rit->points.begin(); pit != rit->points.end(); pit++) {
             pit->SWT = CV_IMAGE_ELEM(SWTImage, float, pit->y, pit->x);
@@ -468,6 +473,8 @@ void SWTMedianFilter (IplImage * SWTImage,
     }
 
 }
+
+
 
 bool Point2dSort (const Point2d &lhs, const Point2d &rhs) {
     return lhs.SWT < rhs.SWT;
@@ -616,6 +623,15 @@ findLegallyConnectedComponentsRAY (IplImage * SWTImage,
         return components;
 }
 
+bool Point2dXSort (const Point2d &lhs, const Point2d &rhs) {
+    return lhs.x < rhs.x;
+}
+bool Point2dYSort (const Point2d &lhs, const Point2d &rhs) {
+    return lhs.y < rhs.y;
+}
+
+
+
 void componentStats(IplImage * SWTImage,
                                          std::vector<Point2d> & component,
                                         float & mean, float & variance, float & median,
@@ -629,8 +645,7 @@ void componentStats(IplImage * SWTImage,
         miny = 1000000;
         maxx = 0;
         maxy = 0;
-        
-       
+
         for (std::vector<Point2d>::const_iterator it = component.begin(); it != component.end(); it++) {
 	
                 float t = CV_IMAGE_ELEM(SWTImage, float, it->y, it->x);
@@ -638,10 +653,8 @@ void componentStats(IplImage * SWTImage,
                 temp.push_back(t);
                 miny = std::min(miny,it->y);
                 minx = std::min(minx,it->x);
-		maxy = std::max(maxy,it->y);
+ 		maxy = std::max(maxy,it->y);
 		maxx = std::max(maxx,it->x);
-                
-
         }
         mean = mean / ((float)temp.size());
         for (std::vector<float>::const_iterator it = temp.begin(); it != temp.end(); it++) {
@@ -683,7 +696,7 @@ void filterComponents(IplImage * SWTImage,
             float width = (float)(maxy-miny+1);
 
             // check font height
-            if (width > 50) {
+            if (width > 50 || length > 50) {
                 continue;
             }
 
@@ -694,7 +707,7 @@ void filterComponents(IplImage * SWTImage,
             float rmaxy = (float)maxy;
             // compute the rotated bounding box
             float increment = 1./36.;
-            for (float theta = increment * PI; theta<PI/2.0; theta += increment * PI) {
+            for (float theta = increment * PI; theta<PI/3.0; theta += increment * PI) {
                 float xmin,xmax,ymin,ymax,xtemp,ytemp,ltemp,wtemp;
                     xmin = 1000000;
                     ymin = 1000000;
@@ -864,17 +877,30 @@ std::vector<Chain> makeChains( IplImage * colorImage,
     std::vector<Chain> chains;
     for ( unsigned int i = 0; i < components.size() - 1; i++ ) {
         for ( unsigned int j = i + 1; j < components.size(); j++ ) {
-            // TODO add color metric
+
+		if(abs(compCenters[i].y - compCenters[j].y) >5.0f)
+			continue;
+		if(abs(compCenters[i].x - compCenters[j].x) < 1.0f)
+			continue;
+
             if ( (compMedians[i]/compMedians[j] <= 2.0 || compMedians[j]/compMedians[i] <= 2.0) &&
                  (compDimensions[i].y/compDimensions[j].y <= 2.0 || compDimensions[j].y/compDimensions[i].y <= 2.0)) {
-                float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x) +
-                             vertical_distance_multip*(compCenters[i].y - compCenters[j].y) * (compCenters[i].y - compCenters[j].y);
+/*                float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x) +
+                         (compCenters[i].y - compCenters[j].y) * (compCenters[i].y - compCenters[j].y);*/
+                float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x);
+
                 float colorDist = (colorAverages[i].x - colorAverages[j].x) * (colorAverages[i].x - colorAverages[j].x) +
                                   (colorAverages[i].y - colorAverages[j].y) * (colorAverages[i].y - colorAverages[j].y) +
                                   (colorAverages[i].z - colorAverages[j].z) * (colorAverages[i].z - colorAverages[j].z);
-                if (dist < 9*(float)(std::max(std::min(compDimensions[i].x,compDimensions[i].y),std::min(compDimensions[j].x,compDimensions[j].y)))
+                
+		//abans era un 9
+		/*if (dist < 15*(float)(std::max(std::min(compDimensions[i].x,compDimensions[i].y),std::min(compDimensions[j].x,compDimensions[j].y)))
                     *(float)(std::max(std::min(compDimensions[i].x,compDimensions[i].y),std::min(compDimensions[j].x,compDimensions[j].y)))
-                    && colorDist < max_color_dist) {
+                    && colorDist < max_color_dist) {*/
+
+
+		if(dist < (float)4*((std::max(compDimensions[i].x, compDimensions[j].x)+(std::max(compCenters[i].x, compCenters[j].x)/2.0))*(float)((std::max(compDimensions[i].x, compDimensions[j].x)+(std::max(compCenters[i].x, compCenters[j].x)/2.0))))
+			&& colorDist < max_color_dist){
                     Chain c;
                     c.p = i;
                     c.q = j;
@@ -1132,22 +1158,26 @@ int main ( int argc, char * argv[] )
     IplImage * grayImage =
             cvCreateImage ( cvGetSize ( in1 ), IPL_DEPTH_8U, 1 );
     cvCvtColor ( in1, grayImage, CV_RGB2GRAY );
-
     IplImage * edgeImage =
             cvCreateImage( cvGetSize (in1),IPL_DEPTH_8U, 1 );
-    
-    cvCanny(grayImage, edgeImage, atoi(argv[4]), atoi(argv[5]), 5) ;
+        
+    cvSmooth(grayImage, grayImage,CV_GAUSSIAN, 3, 3);
+    cvCanny(grayImage, edgeImage, atoi(argv[4]), atoi(argv[5]), 3) ;
+	    cvSaveImage ( "edgeimage.png",edgeImage);
+	
 
     IplImage * gaussianImage =
             cvCreateImage ( cvGetSize(in1), IPL_DEPTH_32F, 1);
     cvConvertScale (grayImage, gaussianImage, 1./255., 0);
-    cvSmooth( gaussianImage, gaussianImage, CV_GAUSSIAN, 5, 5);
+    cvSmooth( gaussianImage, gaussianImage, CV_GAUSSIAN, 3, 3);
     IplImage * gradientX =
             cvCreateImage ( cvGetSize ( in1 ), IPL_DEPTH_32F, 1 );
     IplImage * gradientY =
             cvCreateImage ( cvGetSize ( in1 ), IPL_DEPTH_32F, 1 );
     cvSobel(gaussianImage, gradientX , 1, 0, CV_SCHARR);
     cvSobel(gaussianImage, gradientY , 0, 1, CV_SCHARR);
+
+    //cvSmooth(edgeImage, edgeImage, 3, 3);
     cvSmooth(gradientX, gradientX, 3, 3);
     cvSmooth(gradientY, gradientY, 3, 3);
     cvReleaseImage ( &gaussianImage );

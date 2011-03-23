@@ -39,6 +39,12 @@ struct Chain {
 bool Point2dSort (Point2d const & lhs,
                   Point2d const & rhs);
 
+bool Point2dXSort (Point2d const &lhs, 		
+		   Point2d const &rhs);
+
+bool Point2dYSort (Point2d const &lhs, 		
+		   Point2d const &rhs);
+
 IplImage * loadByteImage ( const char * name );
 
 IplImage * textDetection (IplImage * float_input,  IplImage* prev_input, bool dark_on_light, IplImage* grayImage,
