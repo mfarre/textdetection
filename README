@@ -1,2 +1,1 @@
-First commit of the text detector based on the Microsoft Research Paper:
-"Detecting Text in Natural Scenes with Stroke Width"
+Personal implementation of "Detecting Text in Natural Scenes with Stroke Width" algorithm by Microsoft
