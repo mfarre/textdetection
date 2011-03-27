@@ -281,7 +281,7 @@ void renderChains (IplImage * SWTImage,
 
 IplImage * textDetection (IplImage *    input,  IplImage* prev_input, bool dark_on_light, IplImage* grayImage,
 			IplImage* edgeImage, IplImage* gradientX, IplImage* gradientY, float chain_strictness_pi,  
-			float denom_pi_swt_acceptation_angle, float vertical_distance_multip,float max_color_dist)
+			float denom_pi_swt_acceptation_angle, float max_color_dist)
 {
     assert ( input->depth == IPL_DEPTH_8U );
     assert ( input->nChannels == 3 );
@@ -338,7 +338,7 @@ IplImage * textDetection (IplImage *    input,  IplImage* prev_input, bool dark_
 
     // Make chains of components
     std::vector<Chain> chains;
-    chains = makeChains(input, validComponents, compCenters, compMedians, compDimensions, compBB,chain_strictness_pi,vertical_distance_multip,max_color_dist);
+    chains = makeChains(input, validComponents, compCenters, compMedians, compDimensions, compBB,chain_strictness_pi, max_color_dist);
 
     IplImage * output4 =
             cvCreateImage ( cvGetSize ( input ), IPL_DEPTH_8U, 3 );
@@ -415,11 +415,14 @@ void strokeWidthTransform (IplImage * edgeImage,
                         pnew.x = curPixX;
                         pnew.y = curPixY;
                         points.push_back(pnew);
-			if(points.size()>=2)
+			/*if(points.size()>=2)
 			{
-			  if(abs(points[0].y - points[points.size()-1].y) > 50)
+			  if(abs(points[0].y - points[points.size()-1].y) > 20)
 				break;
-			}
+			  if(abs(points[0].x - points[points.size()-1].x) > 20)
+				break;
+			}*/
+
                         if (CV_IMAGE_ELEM ( edgeImage, uchar, curPixY, curPixX) > 0) {
                             r.q = pnew;
                             // dot product
@@ -688,9 +691,9 @@ void filterComponents(IplImage * SWTImage,
             componentStats(SWTImage, (*it), mean, variance, median, minx, miny, maxx, maxy);
 
              //check if variance is less than half the mean
-             if (variance > 0.5 * mean) {
+            /* if (variance > 0.5 * mean) {
                  continue;
-            }
+            }*/
 
             float length = (float)(maxx-minx+1);
             float width = (float)(maxy-miny+1);
@@ -849,8 +852,7 @@ std::vector<Chain> makeChains( IplImage * colorImage,
                  std::vector<float> & compMedians,
                  std::vector<Point2d> & compDimensions,
                  std::vector<std::pair<Point2d,Point2d> > & compBB,
-                 float strictness_pi, float vertical_distance_multip,
-                 float max_color_dist) {
+                 float strictness_pi,float max_color_dist) {
     assert (compCenters.size() == components.size());
     // make vector of color averages
     std::vector<Point3dFloat> colorAverages;
@@ -894,13 +896,13 @@ std::vector<Chain> makeChains( IplImage * colorImage,
                                   (colorAverages[i].z - colorAverages[j].z) * (colorAverages[i].z - colorAverages[j].z);
                 
 		//abans era un 9
-		/*if (dist < 15*(float)(std::max(std::min(compDimensions[i].x,compDimensions[i].y),std::min(compDimensions[j].x,compDimensions[j].y)))
+		if (dist < 9*(float)(std::max(std::min(compDimensions[i].x,compDimensions[i].y),std::min(compDimensions[j].x,compDimensions[j].y)))
                     *(float)(std::max(std::min(compDimensions[i].x,compDimensions[i].y),std::min(compDimensions[j].x,compDimensions[j].y)))
-                    && colorDist < max_color_dist) {*/
+                    && colorDist < max_color_dist) {
 
 
-		if(dist < (float)4*((std::max(compDimensions[i].x, compDimensions[j].x)+(std::max(compCenters[i].x, compCenters[j].x)/2.0))*(float)((std::max(compDimensions[i].x, compDimensions[j].x)+(std::max(compCenters[i].x, compCenters[j].x)/2.0))))
-			&& colorDist < max_color_dist){
+/*		if(dist < (float)4*((std::max(compDimensions[i].x, compDimensions[j].x)+(std::max(compCenters[i].x, compCenters[j].x)/2.0))*(float)((std::max(compDimensions[i].x, compDimensions[j].x)+(std::max(compCenters[i].x, compCenters[j].x)/2.0))))
+			&& colorDist < max_color_dist){*/
                     Chain c;
                     c.p = i;
                     c.q = j;
@@ -1143,13 +1145,22 @@ std::vector<Chain> makeChains( IplImage * colorImage,
 
 int main ( int argc, char * argv[] )
 {
-  if ( ( argc != 10 ) )
+  if ( ( argc != 8 ) )
   {
-    printf ( "usage: %s <imagefile> <resultImage> <darkText> <canny_low> <canny_high> <chain_strictness PI/X*100> <SWT acceptation PI/X * 100> <vertical distance multiplier> <max color dist> \n",
+    printf ( "usage: %s <imagefile> <resultImage> <canny_low> <canny_high> <chain_strictness PI/X*100> <SWT acceptation PI/X * 100> <max color dist> \n",
              argv[0] );
 
     return -1;
   }
+
+  int canny_low = atoi(argv[3]);
+  int canny_high = atoi(argv[4]);
+  float chain_strictness = atoi(argv[5])/100.0f;
+  float swt_acceptation_denom = atoi(argv[6])/100.0f;
+  int max_color_dist = atoi(argv[7]);
+
+  printf("Parameters:\n \t Input File %s\n \t Canny Low %d\n \t Canny High %d\n \t Chain Strictness %f\n \t Swt acceptation denom %f\n \t Max Color dist %d \n ", argv[1], canny_low,canny_high, chain_strictness, swt_acceptation_denom, max_color_dist);
+  
 
   IplImage * in1 = loadByteImage ( argv[1] );
   IplImage * in2 = loadByteImage ( argv[1] );
@@ -1162,7 +1173,7 @@ int main ( int argc, char * argv[] )
             cvCreateImage( cvGetSize (in1),IPL_DEPTH_8U, 1 );
         
     cvSmooth(grayImage, grayImage,CV_GAUSSIAN, 3, 3);
-    cvCanny(grayImage, edgeImage, atoi(argv[4]), atoi(argv[5]), 3) ;
+    cvCanny(grayImage, edgeImage, atoi(argv[3]), atoi(argv[4]), 3) ;
 	    cvSaveImage ( "edgeimage.png",edgeImage);
 	
 
@@ -1190,8 +1201,8 @@ int main ( int argc, char * argv[] )
     return -1;
   }
 
-  textDetection ( in1, 0,  1, grayImage,edgeImage, gradientX, gradientY,(float)atoi(argv[6])/100.0, (float)atoi(argv[7])/100.0, (float) atoi(argv[8]), (float) atoi(argv[9]) );
-  textDetection ( in2, in1, 0,grayImage,edgeImage, gradientX, gradientY, (float)atoi(argv[6])/100.0, (float)atoi(argv[7])/100.0, (float) atoi(argv[8]), (float) atoi(argv[9]) );
+  textDetection ( in1, 0,  1, grayImage,edgeImage, gradientX, gradientY,(float)atoi(argv[5])/100.0, (float)atoi(argv[6])/100.0, (float) atoi(argv[7]));
+  textDetection ( in2, in1, 0,grayImage,edgeImage, gradientX, gradientY, (float)atoi(argv[5])/100.0, (float)atoi(argv[6])/100.0, (float) atoi(argv[7]));
 
   
   cvSaveImage ( argv[2], in1);

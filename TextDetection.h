@@ -49,7 +49,7 @@ IplImage * loadByteImage ( const char * name );
 
 IplImage * textDetection (IplImage * float_input,  IplImage* prev_input, bool dark_on_light, IplImage* grayImage,
 			IplImage* edgeImage, IplImage* gradientX, IplImage* gradientY, float chain_strictness_pi,
-			float vertical_distance_multip, float max_color_dist);
+			float max_color_dist);
 
 void strokeWidthTransform (IplImage * edgeImage,
                            IplImage * gradientX,
@@ -89,8 +89,7 @@ std::vector<Chain> makeChains( IplImage * colorImage,
                  std::vector<float> & compMedians,
                  std::vector<Point2d> & compDimensions,
                  std::vector<std::pair<Point2d,Point2d> > & compBB,
-                 float strictness_pi,float vertical_distance_multip,
-                 float max_color_dist);
+                 float strictness_pi, float max_color_dist);
 
 
 #endif // TEXTDETECTION_H
