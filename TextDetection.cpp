@@ -519,7 +519,7 @@ findLegallyConnectedComponents (IplImage * SWTImage,
                     if (col+1 < SWTImage->width) {
                         float right = CV_IMAGE_ELEM(SWTImage, float, row, col+1);
 //                        if (right > 0 && ((*ptr)/right <= 3.0 || right/(*ptr) <= 3.0))
-			  if (right > 0 && ((float)(std::max((*ptr),right)/std::min((*ptr),right)) <= 3.0))
+			  if (right > 0 && ((float)(std::max((*ptr),right)/std::min((*ptr),right)) <= 1.5))
                             boost::add_edge(this_pixel, map.at(row * SWTImage->width + col + 1), g);
                     }
 		    
@@ -527,17 +527,17 @@ findLegallyConnectedComponents (IplImage * SWTImage,
                         if (col+1 < SWTImage->width) {
                             float right_down = CV_IMAGE_ELEM(SWTImage, float, row+1, col+1);
 //                            if (right_down > 0 && ((*ptr)/right_down <= 3.0 || right_down/(*ptr) <= 3.0))
-			      if (right_down > 0 && ((float)(std::max((*ptr),right_down)/std::min((*ptr),right_down)) <= 3.0))
+			      if (right_down > 0 && ((float)(std::max((*ptr),right_down)/std::min((*ptr),right_down)) <= 1.5))
                                 boost::add_edge(this_pixel, map.at((row+1) * SWTImage->width + col + 1), g);
                         }
                         float down = CV_IMAGE_ELEM(SWTImage, float, row+1, col);
 //                        if (down > 0 && ((*ptr)/down <= 3.0 || down/(*ptr) <= 3.0))
-			  if (down > 0 && ((float)(std::max((*ptr),down)/std::min((*ptr),down)) <= 3.0))
+			  if (down > 0 && ((float)(std::max((*ptr),down)/std::min((*ptr),down)) <= 1.5))
                             boost::add_edge(this_pixel, map.at((row+1) * SWTImage->width + col), g);
                         if (col-1 >= 0) {
                             float left_down = CV_IMAGE_ELEM(SWTImage, float, row+1, col-1);
 //                            if (left_down > 0 && ((*ptr)/left_down <= 3.0 || left_down/(*ptr) <= 3.0))
-			      if (left_down > 0 && ((float)(std::max((*ptr),left_down)/std::min((*ptr),left_down)) <= 3.0))
+			      if (left_down > 0 && ((float)(std::max((*ptr),left_down)/std::min((*ptr),left_down)) <= 1.5))
                                 boost::add_edge(this_pixel, map.at((row+1) * SWTImage->width + col - 1), g);
                         }
                     }
