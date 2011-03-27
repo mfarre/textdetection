@@ -691,17 +691,17 @@ void filterComponents(IplImage * SWTImage,
             componentStats(SWTImage, (*it), mean, variance, median, minx, miny, maxx, maxy);
 
              //check if variance is less than half the mean
-            /* if (variance > 0.5 * mean) {
+             if (variance > 0.5 * mean) {
                  continue;
-            }*/
+            }
 
             float length = (float)(maxx-minx+1);
             float width = (float)(maxy-miny+1);
 
             // check font height
-            if (width > 50 || length > 50) {
+           /* if (width > 50 || length > 50) {
                 continue;
-            }
+            }*/
 
             float area = length * width;
             float rminx = (float)minx;
@@ -733,13 +733,20 @@ void filterComponents(IplImage * SWTImage,
                 }
             }
             // check if the aspect ratio is between 1/10 and 10
-            if (length/width < 1./15. || length/width > 10.) {
+	    
+            if (length/width < 1./10. || length/width > 10.) {
                 continue;
             }
+	    float diameter = sqrt(length*length+width*width);
+            if(diameter/median > 10.0)
+		continue;
+	    if(width > 300 || width < 5)
+		continue;
+            
 
             // compute the diameter TODO finish
             // compute dense representation of component
-            std::vector <std::vector<float> > denseRepr;
+        /*    std::vector <std::vector<float> > denseRepr;
             denseRepr.reserve(maxx-minx+1);
             for (int i = 0; i < maxx-minx+1; i++) {
                 std::vector<float> tmp;
@@ -751,7 +758,7 @@ void filterComponents(IplImage * SWTImage,
             }
             for (std::vector<Point2d>::iterator pit = it->begin(); pit != it->end(); pit++) {
                 denseRepr[pit->x - minx][pit->y - miny] = 1;
-            }
+            }*/
             // create graph representing components
             const int num_nodes = it->size();
             /*
