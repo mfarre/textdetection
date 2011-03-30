@@ -188,15 +188,16 @@ void renderComponentsWithBoxes (IplImage * SWTImage, std::vector<std::vector<Poi
     //cvReleaseImage ( &outTemp );
     //cvReleaseImage ( &out );
 
-    int count = 0;
+    //int count = 0;
 
     //Changing colors and drawing rectangles
     for (std::vector<std::pair<CvPoint,CvPoint> >::iterator it= bb.begin(); it != bb.end(); it++) {
         CvScalar c;
-        if (count % 3 == 0) c=cvScalar(255,0,0);
+        /*if (count % 3 == 0) c=cvScalar(255,0,0);
         else if (count % 3 == 1) c=cvScalar(0,255,0);
         else c=cvScalar(0,0,255);
-        count++;
+        count++;*/
+	c = cvScalar(0,255,0);
         cvRectangle(output,it->first,it->second,c,2);
     }
 }
@@ -238,13 +239,14 @@ void renderChainsWithBoxes (IplImage * SWTImage,
     cvReleaseImage ( &out );
     cvReleaseImage ( &outTemp);
 
-    int count = 0;
+    //int count = 0;
     for (std::vector<std::pair<CvPoint,CvPoint> >::iterator it= bb.begin(); it != bb.end(); it++) {
         CvScalar c;
-        if (count % 3 == 0) c=cvScalar(255,0,0);
+        /*if (count % 3 == 0) c=cvScalar(255,0,0);
         else if (count % 3 == 1) c=cvScalar(0,255,0);
         else c=cvScalar(0,0,255);
-        count++;
+        count++;*/
+	c = cvScalar(0,255,0);
         cvRectangle(output,it->first,it->second,c,2);
     }
 
@@ -417,9 +419,9 @@ void strokeWidthTransform (IplImage * edgeImage,
                         points.push_back(pnew);
 			/*if(points.size()>=2)
 			{
-			  if(abs(points[0].y - points[points.size()-1].y) > 20)
+			  if(abs(points[0].y - points[points.size()-1].y) > 50)
 				break;
-			  if(abs(points[0].x - points[points.size()-1].x) > 20)
+			  if(abs(points[0].x - points[points.size()-1].x) > 50)
 				break;
 			}*/
 
@@ -519,7 +521,7 @@ findLegallyConnectedComponents (IplImage * SWTImage,
                     if (col+1 < SWTImage->width) {
                         float right = CV_IMAGE_ELEM(SWTImage, float, row, col+1);
 //                        if (right > 0 && ((*ptr)/right <= 3.0 || right/(*ptr) <= 3.0))
-			  if (right > 0 && ((float)(std::max((*ptr),right)/std::min((*ptr),right)) <= 1.5))
+			  if (right > 0 && ((float)(std::max((*ptr),right)/std::min((*ptr),right)) <= 3.0))
                             boost::add_edge(this_pixel, map.at(row * SWTImage->width + col + 1), g);
                     }
 		    
@@ -527,17 +529,17 @@ findLegallyConnectedComponents (IplImage * SWTImage,
                         if (col+1 < SWTImage->width) {
                             float right_down = CV_IMAGE_ELEM(SWTImage, float, row+1, col+1);
 //                            if (right_down > 0 && ((*ptr)/right_down <= 3.0 || right_down/(*ptr) <= 3.0))
-			      if (right_down > 0 && ((float)(std::max((*ptr),right_down)/std::min((*ptr),right_down)) <= 1.5))
+			      if (right_down > 0 && ((float)(std::max((*ptr),right_down)/std::min((*ptr),right_down)) <= 3.0))
                                 boost::add_edge(this_pixel, map.at((row+1) * SWTImage->width + col + 1), g);
                         }
                         float down = CV_IMAGE_ELEM(SWTImage, float, row+1, col);
 //                        if (down > 0 && ((*ptr)/down <= 3.0 || down/(*ptr) <= 3.0))
-			  if (down > 0 && ((float)(std::max((*ptr),down)/std::min((*ptr),down)) <= 1.5))
+			  if (down > 0 && ((float)(std::max((*ptr),down)/std::min((*ptr),down)) <= 3.0))
                             boost::add_edge(this_pixel, map.at((row+1) * SWTImage->width + col), g);
                         if (col-1 >= 0) {
                             float left_down = CV_IMAGE_ELEM(SWTImage, float, row+1, col-1);
 //                            if (left_down > 0 && ((*ptr)/left_down <= 3.0 || left_down/(*ptr) <= 3.0))
-			      if (left_down > 0 && ((float)(std::max((*ptr),left_down)/std::min((*ptr),left_down)) <= 1.5))
+			      if (left_down > 0 && ((float)(std::max((*ptr),left_down)/std::min((*ptr),left_down)) <= 3.0))
                                 boost::add_edge(this_pixel, map.at((row+1) * SWTImage->width + col - 1), g);
                         }
                     }
@@ -745,7 +747,7 @@ void filterComponents(IplImage * SWTImage,
 	    float diameter = sqrt(length*length+width*width);
             if(diameter/median > 10.0)
 		continue;
-	    if(width > 300 || width < 5)
+	    if(width > 300 || width < 10)
 		continue;
             
 
@@ -892,13 +894,19 @@ std::vector<Chain> makeChains( IplImage * colorImage,
     for ( unsigned int i = 0; i < components.size() - 1; i++ ) {
         for ( unsigned int j = i + 1; j < components.size(); j++ ) {
 
-		if(abs(compCenters[i].y - compCenters[j].y) >5.0f)
+		if(abs(compCenters[i].y - compCenters[j].y) > std::max(compDimensions[i].y,compDimensions[j].y)/2.0)
 			continue;
 		if(abs(compCenters[i].x - compCenters[j].x) < 1.0f)
 			continue;
 
-            if ( (compMedians[i]/compMedians[j] <= 2.0 || compMedians[j]/compMedians[i] <= 2.0) &&
-                 (compDimensions[i].y/compDimensions[j].y <= 2.0 || compDimensions[j].y/compDimensions[i].y <= 2.0)) {
+/*            if ( (compMedians[i]/compMedians[j] <= 2.0 || compMedians[j]/compMedians[i] <= 2.0) &&
+                 (compDimensions[i].y/compDimensions[j].y <= 2.0 || compDimensions[j].y/compDimensions[i].y <= 2.0)) {*/
+
+            if ( (std::max(compMedians[i],compMedians[j])/std::min(compMedians[i],compMedians[j]) <= 2.0) &&
+                 (std::max(compDimensions[i].y,compDimensions[j].y)/std::min(compDimensions[i].y,compDimensions[j].y) <= 2.0)) {
+
+
+
 /*                float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x) +
                          (compCenters[i].y - compCenters[j].y) * (compCenters[i].y - compCenters[j].y);*/
                 float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x);
@@ -1173,16 +1181,20 @@ int main ( int argc, char * argv[] )
 
   printf("Parameters:\n \t Input File %s\n \t Canny Low %d\n \t Canny High %d\n \t Chain Strictness %f\n \t Swt acceptation denom %f\n \t Max Color dist %d \n ", argv[1], canny_low,canny_high, chain_strictness, swt_acceptation_denom, max_color_dist);
   
-
+  
   IplImage * in1 = loadByteImage ( argv[1] );
   IplImage * in2 = loadByteImage ( argv[1] );
 
+  // Creating zoomed images
+  IplImage *in1_4 = cvCreateImage(cvSize(2*in1->width,2*in1->height), in1->depth,in1->nChannels);
+  cvResize( in1, in1_4);
+  IplImage *in2_4 = cvCreateImage(cvSize(2*in2->width,2*in2->height), in2->depth,in2->nChannels);
+  cvResize( in2, in2_4);
+
   // Convert to grayscale
-    IplImage * grayImage =
-            cvCreateImage ( cvGetSize ( in1 ), IPL_DEPTH_8U, 1 );
-    cvCvtColor ( in1, grayImage, CV_RGB2GRAY );
-    IplImage * edgeImage =
-            cvCreateImage( cvGetSize (in1),IPL_DEPTH_8U, 1 );
+    IplImage * grayImage = cvCreateImage ( cvGetSize ( in1_4), IPL_DEPTH_8U, 1 );
+    cvCvtColor ( in1_4, grayImage, CV_RGB2GRAY );
+    IplImage * edgeImage = cvCreateImage( cvGetSize (in1_4),IPL_DEPTH_8U, 1 );
         
     cvSmooth(grayImage, grayImage,CV_GAUSSIAN, 3, 3);
     cvCanny(grayImage, edgeImage, atoi(argv[3]), atoi(argv[4]), 3) ;
@@ -1190,21 +1202,20 @@ int main ( int argc, char * argv[] )
 	
 
     IplImage * gaussianImage =
-            cvCreateImage ( cvGetSize(in1), IPL_DEPTH_32F, 1);
+            cvCreateImage ( cvGetSize(in1_4), IPL_DEPTH_32F, 1);
     cvConvertScale (grayImage, gaussianImage, 1./255., 0);
     cvSmooth( gaussianImage, gaussianImage, CV_GAUSSIAN, 3, 3);
     IplImage * gradientX =
-            cvCreateImage ( cvGetSize ( in1 ), IPL_DEPTH_32F, 1 );
+            cvCreateImage ( cvGetSize ( in1_4), IPL_DEPTH_32F, 1 );
     IplImage * gradientY =
-            cvCreateImage ( cvGetSize ( in1 ), IPL_DEPTH_32F, 1 );
+            cvCreateImage ( cvGetSize ( in1_4 ), IPL_DEPTH_32F, 1 );
     cvSobel(gaussianImage, gradientX , 1, 0, CV_SCHARR);
     cvSobel(gaussianImage, gradientY , 0, 1, CV_SCHARR);
 
-    //cvSmooth(edgeImage, edgeImage, 3, 3);
     cvSmooth(gradientX, gradientX, 3, 3);
     cvSmooth(gradientY, gradientY, 3, 3);
     cvReleaseImage ( &gaussianImage );
-    cvReleaseImage ( &grayImage );
+  cvReleaseImage ( &grayImage );
 
 
   if ( !in1 || !in2 )
@@ -1213,13 +1224,15 @@ int main ( int argc, char * argv[] )
     return -1;
   }
 
-  textDetection ( in1, 0,  1, grayImage,edgeImage, gradientX, gradientY,(float)atoi(argv[5])/100.0, (float)atoi(argv[6])/100.0, (float) atoi(argv[7]));
-  textDetection ( in2, in1, 0,grayImage,edgeImage, gradientX, gradientY, (float)atoi(argv[5])/100.0, (float)atoi(argv[6])/100.0, (float) atoi(argv[7]));
+  textDetection ( in1_4, 0,  1, grayImage,edgeImage, gradientX, gradientY,(float)atoi(argv[5])/100.0, (float)atoi(argv[6])/100.0, (float) atoi(argv[7]));
+  textDetection ( in2_4, in1_4, 0,grayImage,edgeImage, gradientX, gradientY, (float)atoi(argv[5])/100.0, (float)atoi(argv[6])/100.0, (float) atoi(argv[7]));
 
-  
+  cvResize( in1_4, in1); 
   cvSaveImage ( argv[2], in1);
   cvReleaseImage ( &in1 );
   cvReleaseImage ( &in2);
+  cvReleaseImage ( &in1_4);
+  cvReleaseImage ( &in2_4);
   cvReleaseImage ( &gradientX );
   cvReleaseImage ( &gradientY );
   cvReleaseImage ( &edgeImage );
