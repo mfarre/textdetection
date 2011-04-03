@@ -73,6 +73,12 @@ std::vector < std::pair < CvPoint,
 	p0 = cvPoint (minx, miny);
       CvPoint
 	p1 = cvPoint (maxx, maxy);
+
+
+      // aspect ratio filtering of the text box
+      if(((float)(maxy-miny)/(float)(maxx-minx)) >= 0.7)
+	continue; 
+
       std::pair < CvPoint, CvPoint > pair (p0, p1);
       bb.push_back (pair);
     }
