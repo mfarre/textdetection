@@ -698,7 +698,7 @@ void filterComponents(IplImage * SWTImage,
             componentStats(SWTImage, (*it), mean, variance, median, minx, miny, maxx, maxy);
 
              //check if variance is less than half the mean
-             if (variance > 0.5 * mean) {
+             if (variance > 0.64 * mean) {
                  continue;
             }
 
@@ -894,7 +894,7 @@ std::vector<Chain> makeChains( IplImage * colorImage,
     for ( unsigned int i = 0; i < components.size() - 1; i++ ) {
         for ( unsigned int j = i + 1; j < components.size(); j++ ) {
 
-		if(abs(compCenters[i].y - compCenters[j].y) > std::max(compDimensions[i].y,compDimensions[j].y)/2.0)
+		if(abs(compCenters[i].y - compCenters[j].y) > std::max(compDimensions[i].y,compDimensions[j].y)/3.0)
 			continue;
 		if(abs(compCenters[i].x - compCenters[j].x) < 1.0f)
 			continue;
@@ -907,9 +907,9 @@ std::vector<Chain> makeChains( IplImage * colorImage,
 
 
 
-/*                float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x) +
-                         (compCenters[i].y - compCenters[j].y) * (compCenters[i].y - compCenters[j].y);*/
-                float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x);
+                float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x) +
+                         (compCenters[i].y - compCenters[j].y) * (compCenters[i].y - compCenters[j].y);
+                //float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x);
 
                 float colorDist = (colorAverages[i].x - colorAverages[j].x) * (colorAverages[i].x - colorAverages[j].x) +
                                   (colorAverages[i].y - colorAverages[j].y) * (colorAverages[i].y - colorAverages[j].y) +
