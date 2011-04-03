@@ -23,6 +23,9 @@
 
 #define PI 3.14159265
 
+#define DEBUG(x) x
+//#define DEBUG(x) 
+
 using namespace std;
 
 
@@ -415,15 +418,21 @@ textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
 			SWTImage, rays, denom_pi_swt_acceptation_angle);
   SWTMedianFilter (SWTImage, rays);
 
-  IplImage *
-    output2 = cvCreateImage (cvGetSize (input), IPL_DEPTH_32F, 1);
-  normalizeImage (SWTImage, output2);
-  IplImage *
-    saveSWT = cvCreateImage (cvGetSize (input), IPL_DEPTH_8U, 1);
-  cvConvertScale (output2, saveSWT, 255, 0);
-  cvSaveImage ("SWT.png", saveSWT);
-  cvReleaseImage (&output2);
-  cvReleaseImage (&saveSWT);
+  DEBUG(
+   IplImage *
+     output2 = cvCreateImage (cvGetSize (input), IPL_DEPTH_32F, 1);
+   normalizeImage (SWTImage, output2);
+   IplImage *
+     saveSWT = cvCreateImage (cvGetSize (input), IPL_DEPTH_8U, 1);
+   cvConvertScale (output2, saveSWT, 255, 0);
+   
+   if(prev_input == NULL)
+	   cvSaveImage ("SWT_0.png", saveSWT);
+   else
+	   cvSaveImage ("SWT_1.png", saveSWT);
+   cvReleaseImage (&output2);
+   cvReleaseImage (&saveSWT);
+  )
 
   // Calculate legally connect components from SWT and gradient image.
   // return type is a vector of vectors, where each outer vector is a component and
@@ -443,14 +452,16 @@ textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
 
 
 
-
-
+  DEBUG(
   IplImage *
     output3 = cvCreateImage (cvGetSize (input), 8U, 3);
-  renderComponentsWithBoxes (SWTImage, validComponents, compBB, output3);
-  cvSaveImage ("components.png", output3);
-  cvReleaseImage (&output3);
-
+   renderComponentsWithBoxes (SWTImage, validComponents, compBB, output3);
+   if(prev_input == NULL)
+	   cvSaveImage ("components_0.png", output3);
+   else
+	   cvSaveImage ("components_1.png",output3);
+   cvReleaseImage (&output3);
+  )
 
 
 
@@ -1664,7 +1675,7 @@ main (int argc, char *argv[])
 
   cvSmooth (grayImage, grayImage, CV_GAUSSIAN, 3, 3);
   cvCanny (grayImage, edgeImage, atoi (argv[3]), atoi (argv[4]), 3);
-  cvSaveImage ("edgeimage.png", edgeImage);
+  DEBUG(cvSaveImage ("edgeimage.png", edgeImage));
 
 
   IplImage *gaussianImage =
