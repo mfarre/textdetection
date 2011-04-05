@@ -93,7 +93,7 @@ std::vector < std::pair < CvPoint,
 
 
       // aspect ratio filtering of the text box
-      if(((float)(maxy-miny)/(float)(maxx-minx)) >= 0.9)
+      if(((float)(maxy-miny)/(float)(maxx-minx)) >= 0.7)
 	continue; 
 
       std::pair < CvPoint, CvPoint > pair (p0, p1);
@@ -792,7 +792,7 @@ std::vector < std::vector < Point2d >
 					 map.at ((row + 1) * SWTImage->width +
 						 col + 1), g);
 		    }
-		  float
+/*		  float
 		    down = CV_IMAGE_ELEM (SWTImage, float, row + 1, col);
 		  if (down > 0
 		      &&
@@ -815,7 +815,7 @@ std::vector < std::vector < Point2d >
 			boost::add_edge (this_pixel,
 					 map.at ((row + 1) * SWTImage->width +
 						 col - 1), g);
-		    }
+		    }*/
 		}
 	    }
 	  ptr++;
