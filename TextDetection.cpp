@@ -453,11 +453,15 @@ textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
    cvConvertScale (output2, saveSWT, 255, 0);
    
    if(prev_input == NULL)
-	   //cvSaveImage ("SWT_0.png", saveSWT);
+	{
+	   cvSaveImage ("pseudo_SWT_0.png", saveSWT);
 	   writePseudoImage(saveSWT, "SWT_0.png");
+	}
    else
-	   //cvSaveImage ("SWT_1.png", saveSWT);
+	{
+	   cvSaveImage ("pseudo_SWT_1.png", saveSWT);
 	   writePseudoImage(saveSWT, "SWT_1.png");
+	}
    cvReleaseImage (&output2);
    cvReleaseImage (&saveSWT);
   )
