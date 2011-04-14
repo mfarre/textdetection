@@ -12,6 +12,8 @@
 *warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 *
 *You should have received a copy of the GNU General Public License along with Foobar. If not, see http://www.gnu.org/licenses/.
+*
+*To compile, run: gcc `pkg-config --cflags --libs opencv` -o textDetector src/TextDetection.cpp src/pseudocolor.c
 */
 
 
@@ -36,7 +38,7 @@
 #include <algorithm>
 #include <vector>
 #include "TextDetection.h"
-
+#include "cv_util.h"
 
 #define PI 3.14159265
 
@@ -437,8 +439,9 @@ textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
 	  *ptr++ = -1;
 	}
     }
-  strokeWidthTransform (edgeImage, gradientX, gradientY, dark_on_light,
-			SWTImage, rays, denom_pi_swt_acceptation_angle);
+  strokeWidthTransform (edgeImage, gradientX, gradientY,
+                        dark_on_light, SWTImage, rays, 
+                        denom_pi_swt_acceptation_angle);
   SWTMedianFilter (SWTImage, rays);
 
   DEBUG(
@@ -450,9 +453,11 @@ textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
    cvConvertScale (output2, saveSWT, 255, 0);
    
    if(prev_input == NULL)
-	   cvSaveImage ("SWT_0.png", saveSWT);
+	   //cvSaveImage ("SWT_0.png", saveSWT);
+	   writePseudoImage(saveSWT, "SWT_0.png");
    else
-	   cvSaveImage ("SWT_1.png", saveSWT);
+	   //cvSaveImage ("SWT_1.png", saveSWT);
+	   writePseudoImage(saveSWT, "SWT_1.png");
    cvReleaseImage (&output2);
    cvReleaseImage (&saveSWT);
   )
@@ -562,6 +567,8 @@ strokeWidthTransform (IplImage * edgeImage,
 		G_x = CV_IMAGE_ELEM (gradientX, float, row, col);
 	      float
 		G_y = CV_IMAGE_ELEM (gradientY, float, row, col);
+
+
 	      // normalize gradient
 	      float
 		mag = sqrt ((G_x * G_x) + (G_y * G_y));
@@ -596,13 +603,20 @@ strokeWidthTransform (IplImage * edgeImage,
 		      pnew.x = curPixX;
 		      pnew.y = curPixY;
 		      points.push_back (pnew);
-		      /*if(points.size()>=2)
+
+		      if(points.size()>=2)
 		         {
-		         if(abs(points[0].y - points[points.size()-1].y) > 50)
+		         /*if(abs(points[0].y - points[points.size()-1].y) > 50)
 		         break;
 		         if(abs(points[0].x - points[points.size()-1].x) > 50)
-		         break;
-		         } */
+		         break;*/
+			  
+                         /*if(sqrt((points[0].x-points[points.size()-1].x)*(points[0].x-points[points.size()-1].x)+
+				(points[0].y-points[points.size()-1].y)*(points[0].y-points[points.size()-1].y))> 
+					std::min(SWTImage->width/2, SWTImage->height/2))
+				break;*/
+   		
+		         } 
 
 		      if (CV_IMAGE_ELEM (edgeImage, uchar, curPixY, curPixX) >
 			  0)
@@ -760,6 +774,7 @@ std::vector < std::vector < Point2d >
 	  if (*ptr > 0)
 	    {
 	      // check pixel to the right, right-down, down, left-down
+	      // now only checking right and right-down to avoid diagonal elements connexion
 	      int
 		this_pixel = map[row * SWTImage->width + col];
 	      if (col + 1 < SWTImage->width)

@@ -12,6 +12,8 @@
 *warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 *
 *You should have received a copy of the GNU General Public License along with Foobar. If not, see http://www.gnu.org/licenses/.
+*
+*To compile, run: gcc `pkg-config --cflags --libs opencv` -o textDetector src/TextDetection.cpp src/pseudocolor.c
 */
 
 #ifndef TEXTDETECTION_H
