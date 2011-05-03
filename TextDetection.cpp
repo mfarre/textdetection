@@ -37,6 +37,7 @@
 #include <utility>
 #include <algorithm>
 #include <vector>
+#include <limits.h>
 #include "TextDetection.h"
 #include "cv_util.h"
 
@@ -312,7 +313,94 @@ renderComponentsWithBoxes (IplImage * SWTImage,
     }
 }
 
-void
+
+std::vector < std::pair < CvPoint,
+  CvPoint > >mergeBoundingBoxes (std::vector < std::pair < CvPoint, CvPoint > >boxes, CvSize size)
+{
+    std::vector < std::pair<CvPoint,CvPoint > > mergedBB;
+    std::vector < std::vector < int> > cells;
+    typedef boost::adjacency_list <boost::vecS, boost::vecS, boost::undirectedS> Graph;
+    Graph G;
+    
+
+    //Initialize map
+    for(int j=0;j<size.height;j++)
+	for(int i=0;i<size.width;i++)
+	{
+		std::vector <int> inicial;
+		inicial.push_back(-1);
+		cells.push_back(inicial);
+	}
+    
+    //Filling the map
+    for(int box=0;box<boxes.size();box++)
+    {
+      for(int i=boxes[box].first.y;i<=boxes[box].second.y;i++)
+      {
+	for(int j= boxes[box].first.x;j<=boxes[box].second.x;j++)
+	{
+	  cells[j+i*size.width].push_back(box);
+	}
+      }
+    }
+
+    //Creating the graph
+    for(int i=0; i<cells.size();i++)
+    {
+	if(cells[i].size() > 2)
+	{
+          for (int val=1;val<cells[i].size()-1;val++)
+	   {
+	    add_edge(cells[i][val], cells[i][val+1], G);
+	   }
+        }
+    }
+
+
+    std::vector<int> component(num_vertices(G));
+    int num = connected_components(G, &component[0]);
+    
+    std::vector<int>::size_type i;
+    /*cout << "Total number of components: " << num << endl;
+    for (i = 0; i != component.size(); ++i)
+      cout << "Box " << i <<" is in component " << component[i] << endl;
+    cout << endl;*/
+
+    for (int i=0;i<num;i++)
+    {
+      bool compFound = false;
+      int minx = INT_MAX;
+      int miny = INT_MAX;
+      int maxx = INT_MIN;
+      int maxy = INT_MIN;
+
+       for(int j=0;j<component.size();j++)
+       {
+             if(component[j] == i)
+	     {
+		      miny = std::min (miny, boxes[j].first.y);
+		      minx = std::min (minx, boxes[j].first.x);
+		      maxy = std::max (maxy, boxes[j].second.y);
+		      maxx = std::max (maxx, boxes[j].second.x);
+		      compFound = true;
+	     }
+       }
+       if(compFound)
+       {
+	       CvPoint
+		 p0 = cvPoint (minx, miny);
+	       CvPoint
+		 p1 = cvPoint (maxx, maxy);
+	       std::pair < CvPoint, CvPoint > pair (p0, p1);
+	       mergedBB.push_back(pair);
+       }
+    }
+
+    std::cout << "mergedBB size " << mergedBB.size() << std::endl;
+    return mergedBB;
+}
+
+std::vector < std::pair < CvPoint, CvPoint > >
 renderChainsWithBoxes (IplImage * SWTImage,
 		       std::vector < std::vector < Point2d > >&components,
 		       std::vector < Chain > &chains,
@@ -351,28 +439,30 @@ renderChainsWithBoxes (IplImage * SWTImage,
   renderComponents (SWTImage, componentsRed, outTemp);
   std::vector < std::pair < CvPoint, CvPoint > >bb;
   bb = findBoundingBoxes (components, chains, compBB, outTemp);
+  //bb = mergeBoundingBoxes(bb,cvGetSize(output));
 
-  IplImage *
+  /*IplImage *
     out = cvCreateImage (cvGetSize (output), IPL_DEPTH_8U, 1);
   cvConvertScale (outTemp, out, 255, 0);
   // cvCvtColor (out, output, CV_GRAY2RGB);
-  cvReleaseImage (&out);
+  cvReleaseImage (&out);*/
   cvReleaseImage (&outTemp);
 
-  //int count = 0;
+  int count = 0;
   for (std::vector < std::pair < CvPoint, CvPoint > >::iterator it =
        bb.begin (); it != bb.end (); it++)
     {
       CvScalar
 	c;
-      /*if (count % 3 == 0) c=cvScalar(255,0,0);
+      if (count % 3 == 0) c=cvScalar(255,0,0);
          else if (count % 3 == 1) c=cvScalar(0,255,0);
          else c=cvScalar(0,0,255);
-         count++; */
-      c = cvScalar (0, 255, 0);
+         count++; 
+      //c = cvScalar (0, 255, 0);
       cvRectangle (output, it->first, it->second, c, 2);
     }
 
+ return bb;
 }
 
 void
@@ -413,7 +503,7 @@ renderChains (IplImage * SWTImage,
 
 }
 
-IplImage *
+std::vector < std::pair < CvPoint, CvPoint > >
 textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
 	       IplImage * grayImage, IplImage * edgeImage,
 	       IplImage * gradientX, IplImage * gradientY,
@@ -454,13 +544,13 @@ textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
    
    if(prev_input == NULL)
 	{
-	   cvSaveImage ("pseudo_SWT_0.png", saveSWT);
-	   writePseudoImage(saveSWT, "SWT_0.png");
+	   cvSaveImage ("SWT_0.png", saveSWT);
+	   writePseudoImage(saveSWT, "pseudo_SWT_0.png");
 	}
    else
 	{
-	   cvSaveImage ("pseudo_SWT_1.png", saveSWT);
-	   writePseudoImage(saveSWT, "SWT_1.png");
+	   cvSaveImage ("SWT_1.png", saveSWT);
+	   writePseudoImage(saveSWT, "pseudo_SWT_1.png");
 	}
    cvReleaseImage (&output2);
    cvReleaseImage (&saveSWT);
@@ -470,7 +560,7 @@ textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
   // return type is a vector of vectors, where each outer vector is a component and
   // the inner vector contains the (y,x) of each pixel in that component.
   std::vector < std::vector < Point2d > >components =
-    findLegallyConnectedComponents (SWTImage, rays);
+    findLegallyConnectedComponents (SWTImage,input, rays);
 
   // Filter the components
   std::vector < std::vector < Point2d > >validComponents;
@@ -503,14 +593,26 @@ textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
     makeChains (input, validComponents, compCenters, compMedians,
 		compDimensions, compBB, chain_strictness_pi, max_color_dist);
 
-  IplImage *
-    output4 = cvCreateImage (cvGetSize (input), IPL_DEPTH_8U, 3);
+/*  IplImage *
+    output4 = cvCreateImage (cvGetSize (input), IPL_DEPTH_8U, 3);*/
+
+
+  std::vector < std::pair < CvPoint, CvPoint > > tempBB;
 
   if (prev_input != 0)
-    renderChainsWithBoxes (SWTImage, validComponents, chains, compBB,
-			   prev_input);
+    {
+       tempBB = renderChainsWithBoxes (SWTImage, validComponents, chains, compBB,
+	   			   prev_input);
+       DEBUG(
+	renderChainsWithBoxes (SWTImage, validComponents, chains, compBB, input);
+     	cvSaveImage("render_1.png",input);
+       )
+    }
   else
-    renderChainsWithBoxes (SWTImage, validComponents, chains, compBB, input);
+    {
+     tempBB = renderChainsWithBoxes (SWTImage, validComponents, chains, compBB, input);
+     DEBUG( cvSaveImage("render_0.png",input);)
+    }
   //renderChains ( SWTImage, validComponents, chains, output4 );
 
 
@@ -524,7 +626,7 @@ textDetection (IplImage * input, IplImage * prev_input, bool dark_on_light,
     renderChainsWithBoxes ( SWTImage, validComponents, chains, compBB, output); 
     */
   cvReleaseImage (&SWTImage);
-  return output4;
+  return tempBB;
 }
 
 void
@@ -585,8 +687,8 @@ strokeWidthTransform (IplImage * edgeImage,
 		{
 		  G_x = G_x / mag;
 		  G_y = G_y / mag;
-
 		}
+
 	      while (true)
 		{
 		  curX += G_x * prec;
@@ -694,6 +796,10 @@ strokeWidthTransform (IplImage * edgeImage,
 
 }
 
+
+
+
+
 void
 SWTMedianFilter (IplImage * SWTImage, std::vector < Ray > &rays)
 {
@@ -729,6 +835,7 @@ Point2dSort (const Point2d & lhs, const Point2d & rhs)
 
 std::vector < std::vector < Point2d >
   >findLegallyConnectedComponents (IplImage * SWTImage,
+				   IplImage * ColorImage,
 				   std::vector < Ray > &rays)
 {
   boost::unordered_map < int, int >
@@ -1335,8 +1442,6 @@ std::vector < Chain > makeChains (IplImage * colorImage,
 							 compCenters[j].x) +
 		(compCenters[i].y - compCenters[j].y) * (compCenters[i].y -
 							 compCenters[j].y);
-	      //float dist = (compCenters[i].x - compCenters[j].x) * (compCenters[i].x - compCenters[j].x);
-
 	      float colorDist =
 		(colorAverages[i].x -
 		 colorAverages[j].x) * (colorAverages[i].x -
@@ -1431,7 +1536,7 @@ std::vector < Chain > makeChains (IplImage * colorImage,
 			       chains[i].direction.y *
 			       -chains[j].direction.y) < strictness)
 			    {
-			      /*      if (chains[i].p == chains[i].q || chains[j].p == chains[j].q) {
+/*			           if (chains[i].p == chains[i].q || chains[j].p == chains[j].q) {
 			         std::cout << "CRAZY ERROR" << std::endl;
 			         } else if (chains[i].p == chains[j].p && chains[i].q == chains[j].q) {
 			         std::cout << "CRAZY ERROR" << std::endl;
@@ -1484,8 +1589,8 @@ std::vector < Chain > makeChains (IplImage * colorImage,
 			       chains[i].direction.y *
 			       chains[j].direction.y) < strictness)
 			    {
-/*
-                                if (chains[i].p == chains[i].q || chains[j].p == chains[j].q) {
+
+/*                                 if (chains[i].p == chains[i].q || chains[j].p == chains[j].q) {
                                     std::cout << "CRAZY ERROR" << std::endl;
                                 } else if (chains[i].p == chains[j].p && chains[i].q == chains[j].q) {
                                     std::cout << "CRAZY ERROR" << std::endl;
@@ -1494,7 +1599,7 @@ std::vector < Chain > makeChains (IplImage * colorImage,
                                 }
                                 std::cerr << 2 <<std::endl;
 
-                                std::cerr << chains[i].p << " " << chains[i].q << std::endl;
+                               std::cerr << chains[i].p << " " << chains[i].q << std::endl;
                                 std::cerr << chains[j].p << " " << chains[j].q << std::endl;
                                 std::cerr << chains[i].direction.x << " " << chains[i].direction.y << std::endl;
                                 std::cerr << chains[j].direction.x << " " << chains[j].direction.y << std::endl;
@@ -1541,7 +1646,7 @@ std::vector < Chain > makeChains (IplImage * colorImage,
 			       chains[i].direction.y *
 			       chains[j].direction.y) < strictness)
 			    {
-			      /*                           if (chains[i].p == chains[i].q || chains[j].p == chains[j].q) {
+			         /*                       if (chains[i].p == chains[i].q || chains[j].p == chains[j].q) {
 			         std::cout << "CRAZY ERROR" << std::endl;
 			         } else if (chains[i].p == chains[j].p && chains[i].q == chains[j].q) {
 			         std::cout << "CRAZY ERROR" << std::endl;
@@ -1597,7 +1702,7 @@ std::vector < Chain > makeChains (IplImage * colorImage,
 			       chains[i].direction.y *
 			       -chains[j].direction.y) < strictness)
 			    {
-			      /*           if (chains[i].p == chains[i].q || chains[j].p == chains[j].q) {
+			         /*        if (chains[i].p == chains[i].q || chains[j].p == chains[j].q) {
 			         std::cout << "CRAZY ERROR" << std::endl;
 			         } else if (chains[i].p == chains[j].p && chains[i].q == chains[j].q) {
 			         std::cout << "CRAZY ERROR" << std::endl;
@@ -1698,7 +1803,6 @@ main (int argc, char *argv[])
 
 
   IplImage *in1 = loadByteImage (argv[1]);
-  IplImage *in2 = loadByteImage (argv[1]);
 
   // Creating zoomed images
   IplImage *in1_4 =
@@ -1706,10 +1810,13 @@ main (int argc, char *argv[])
 		   in1->nChannels);
   cvResize (in1, in1_4);
   IplImage *in2_4 =
-    cvCreateImage (cvSize (2 * in2->width, 2 * in2->height), in2->depth,
-		   in2->nChannels);
-  cvResize (in2, in2_4);
-
+    cvCreateImage (cvSize (2 * in1->width, 2 * in1->height), in1->depth,
+		   in1->nChannels);
+  cvResize (in1, in2_4);
+  IplImage *in3_4 =
+    cvCreateImage (cvSize (2 * in1->width, 2 * in1->height), in1->depth,
+		   in1->nChannels);
+  cvResize (in1, in3_4);
   // Convert to grayscale
   IplImage *grayImage = cvCreateImage (cvGetSize (in1_4), IPL_DEPTH_8U, 1);
   cvCvtColor (in1_4, grayImage, CV_RGB2GRAY);
@@ -1735,25 +1842,44 @@ main (int argc, char *argv[])
   cvReleaseImage (&grayImage);
 
 
-  if (!in1 || !in2)
+  if (!in1)
     {
       std::cout << "couldn't load query image" << std::endl;
       return -1;
     }
+  std::vector < std::pair < CvPoint, CvPoint > > temp1, temp2, bb;
 
-  textDetection (in1_4, 0, 1, grayImage, edgeImage, gradientX, gradientY,
+  temp1 = textDetection (in1_4, 0, 1, grayImage, edgeImage, gradientX, gradientY,
 		 (float) atoi (argv[5]) / 100.0,
 		 (float) atoi (argv[6]) / 100.0, (float) atoi (argv[7]));
-  textDetection (in2_4, in1_4, 0, grayImage, edgeImage, gradientX, gradientY,
+  temp2 = textDetection (in2_4, in1_4, 0, grayImage, edgeImage, gradientX, gradientY,
 		 (float) atoi (argv[5]) / 100.0,
 		 (float) atoi (argv[6]) / 100.0, (float) atoi (argv[7]));
 
-  cvResize (in1_4, in1);
+  for(int i=0;i<temp2.size();i++)
+  {
+    temp1.push_back(temp2[i]);
+  }
+  bb = mergeBoundingBoxes(temp1,cvGetSize(in1_4));
+  for (std::vector < std::pair < CvPoint, CvPoint > >::iterator it =
+       bb.begin (); it != bb.end (); it++)
+    {
+      CvScalar
+	c;
+      /*if (count % 3 == 0) c=cvScalar(255,0,0);
+         else if (count % 3 == 1) c=cvScalar(0,255,0);
+         else c=cvScalar(0,0,255);
+         count++; */
+      c = cvScalar (0, 255, 0);
+      cvRectangle (in3_4, it->first, it->second, c, 2);
+    }
+
+  cvResize (in3_4, in1);
   cvSaveImage (argv[2], in1);
   cvReleaseImage (&in1);
-  cvReleaseImage (&in2);
   cvReleaseImage (&in1_4);
   cvReleaseImage (&in2_4);
+  cvReleaseImage (&in3_4);
   cvReleaseImage (&gradientX);
   cvReleaseImage (&gradientY);
   cvReleaseImage (&edgeImage);

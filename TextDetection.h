@@ -82,10 +82,12 @@ void SWTMedianFilter (IplImage * SWTImage,
 
 std::vector< std::vector<Point2d> >
 findLegallyConnectedComponents (IplImage * SWTImage,
+				IplImage * colorImage,
                                 std::vector<Ray> & rays);
 
 std::vector< std::vector<Point2d> >
 findLegallyConnectedComponentsRAY (IplImage * SWTImage,
+				   IplImage * ColorImage,
                                 std::vector<Ray> & rays);
 
 void componentStats(IplImage * SWTImage,
