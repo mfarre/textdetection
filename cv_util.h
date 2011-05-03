@@ -7,7 +7,7 @@
 #include <opencv/cxcore.h>
 #include "pseudocolor.h"
 
-void writePseudoImage(IplImage *img, char* filename)
+void writePseudoImage(IplImage *img, std::string filename)
 {
 	Pseudocolor psdata;
 	//Init psdata
@@ -25,7 +25,7 @@ void writePseudoImage(IplImage *img, char* filename)
 	generate_pseudocolorTable(&psdata);
 	pseudocolor(img, img_result, &psdata);
 
-	cvSaveImage(filename,img_result);
+	cvSaveImage(filename.c_str(),img_result);
 	cvReleaseImage(&img_result);
 }	
 

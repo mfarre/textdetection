@@ -57,17 +57,14 @@ struct Chain {
 bool Point2dSort (Point2d const & lhs,
                   Point2d const & rhs);
 
-bool Point2dXSort (Point2d const &lhs, 		
-		   Point2d const &rhs);
-
-bool Point2dYSort (Point2d const &lhs, 		
-		   Point2d const &rhs);
-
 IplImage * loadByteImage ( const char * name );
 
-IplImage * textDetection (IplImage * float_input,  IplImage* prev_input, bool dark_on_light, IplImage* grayImage,
-			IplImage* edgeImage, IplImage* gradientX, IplImage* gradientY, float chain_strictness_pi,
-			float max_color_dist);
+std::vector < std::pair < CvPoint, CvPoint > >
+textDetection (IplImage * in, bool dark_on_light,
+	       IplImage * grayImage, IplImage * edgeImage,
+	       IplImage * gradientX, IplImage * gradientY,
+	       float chain_strictness_pi,
+	       float denom_pi_swt_acceptation_angle, float max_color_dist);
 
 void strokeWidthTransform (IplImage * edgeImage,
                            IplImage * gradientX,
@@ -83,11 +80,6 @@ void SWTMedianFilter (IplImage * SWTImage,
 std::vector< std::vector<Point2d> >
 findLegallyConnectedComponents (IplImage * SWTImage,
 				IplImage * colorImage,
-                                std::vector<Ray> & rays);
-
-std::vector< std::vector<Point2d> >
-findLegallyConnectedComponentsRAY (IplImage * SWTImage,
-				   IplImage * ColorImage,
                                 std::vector<Ray> & rays);
 
 void componentStats(IplImage * SWTImage,
