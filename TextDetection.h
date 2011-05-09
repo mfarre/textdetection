@@ -67,6 +67,7 @@ textDetection (IplImage * in, bool dark_on_light,
 	       float denom_pi_swt_acceptation_angle, float max_color_dist);
 
 void strokeWidthTransform (IplImage * edgeImage,
+			   IplImage * colorImage,
                            IplImage * gradientX,
                            IplImage * gradientY,
                            bool dark_on_light,

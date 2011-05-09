@@ -89,15 +89,13 @@ std::vector < std::pair < CvPoint,
 	  maxy = std::max (maxy, compBB[*cit].second.y);
 	  maxx = std::max (maxx, compBB[*cit].second.x);
 	}
-      CvPoint
-	p0 = cvPoint (minx, miny);
-      CvPoint
-	p1 = cvPoint (maxx, maxy);
+      CvPoint p0 = cvPoint (minx, miny);
+      CvPoint p1 = cvPoint (maxx, maxy);
 
 
       // aspect ratio filtering of the text box
-      if(((float)(maxy-miny)/(float)(maxx-minx)) >= 0.7)
-	continue; 
+      if (((float) (maxy - miny) / (float) (maxx - minx)) >= 0.7)
+	continue;
 
       std::pair < CvPoint, CvPoint > pair (p0, p1);
       bb.push_back (pair);
@@ -130,10 +128,8 @@ std::vector < std::pair < CvPoint,
 	  maxy = std::max (maxy, it->y);
 	  maxx = std::max (maxx, it->x);
 	}
-      CvPoint
-	p0 = cvPoint (minx, miny);
-      CvPoint
-	p1 = cvPoint (maxx, maxy);
+      CvPoint p0 = cvPoint (minx, miny);
+      CvPoint p1 = cvPoint (maxx, maxy);
       std::pair < CvPoint, CvPoint > pair (p0, p1);
       bb.push_back (pair);
     }
@@ -281,10 +277,8 @@ renderComponentsWithBoxes (IplImage * SWTImage,
   for (std::vector < std::pair < Point2d, Point2d > >::iterator it =
        compBB.begin (); it != compBB.end (); it++)
     {
-      CvPoint
-	p0 = cvPoint (it->first.x, it->first.y);
-      CvPoint
-	p1 = cvPoint (it->second.x, it->second.y);
+      CvPoint p0 = cvPoint (it->first.x, it->first.y);
+      CvPoint p1 = cvPoint (it->second.x, it->second.y);
       std::pair < CvPoint, CvPoint > pair (p0, p1);
       bb.push_back (pair);
     }
@@ -293,8 +287,8 @@ renderComponentsWithBoxes (IplImage * SWTImage,
     out = cvCreateImage (cvGetSize (output), IPL_DEPTH_8U, 1);
   cvConvertScale (outTemp, out, 255, 0);
   cvCvtColor (out, output, CV_GRAY2RGB);
-  cvReleaseImage ( &outTemp );
-  cvReleaseImage ( &out );
+  cvReleaseImage (&outTemp);
+  cvReleaseImage (&out);
 
   //int count = 0;
 
@@ -302,8 +296,7 @@ renderComponentsWithBoxes (IplImage * SWTImage,
   for (std::vector < std::pair < CvPoint, CvPoint > >::iterator it =
        bb.begin (); it != bb.end (); it++)
     {
-      CvScalar
-	c;
+      CvScalar c;
       /*if (count % 3 == 0) c=cvScalar(255,0,0);
          else if (count % 3 == 1) c=cvScalar(0,255,0);
          else c=cvScalar(0,0,255);
@@ -315,94 +308,110 @@ renderComponentsWithBoxes (IplImage * SWTImage,
 
 
 std::vector < std::pair < CvPoint,
-  CvPoint > >mergeBoundingBoxes (std::vector < std::pair < CvPoint, CvPoint > >boxes, CvSize size)
+  CvPoint > >mergeBoundingBoxes (std::vector < std::pair < CvPoint,
+				 CvPoint > >boxes, CvSize size)
 {
-    std::vector < std::pair<CvPoint,CvPoint > > mergedBB;
-    std::vector < std::vector < int> > cells;
-    typedef boost::adjacency_list <boost::vecS, boost::vecS, boost::undirectedS> Graph;
-    Graph G;
-    
+  std::vector < std::pair < CvPoint, CvPoint > >mergedBB;
+  std::vector < std::vector < int > >
+    cells;
+  typedef
+    boost::adjacency_list <
+    boost::vecS,
+    boost::vecS,
+    boost::undirectedS >
+    Graph;
+  Graph
+    G;
 
-    //Initialize map
-    for(int j=0;j<size.height;j++)
-	for(int i=0;i<size.width;i++)
-	{
-		std::vector <int> inicial;
-		inicial.push_back(-1);
-		cells.push_back(inicial);
-	}
-    
-    //Filling the map
-    for(int box=0;box<boxes.size();box++)
-    {
-      for(int i=boxes[box].first.y;i<=boxes[box].second.y;i++)
+
+  //Initialize map
+  for (int j = 0; j < size.height; j++)
+    for (int i = 0; i < size.width; i++)
       {
-	for(int j= boxes[box].first.x;j<=boxes[box].second.x;j++)
-	{
-	  cells[j+i*size.width].push_back(box);
-	}
+	std::vector < int >
+	  inicial;
+	inicial.push_back (-1);
+	cells.push_back (inicial);
       }
-    }
 
-    //Creating the graph
-    for(int i=0; i<cells.size();i++)
+  //Filling the map
+  for (int box = 0; box < boxes.size (); box++)
     {
-	if(cells[i].size() > 2)
+      for (int i = boxes[box].first.y; i <= boxes[box].second.y; i++)
 	{
-          for (int val=1;val<cells[i].size()-1;val++)
-	   {
-	    add_edge(cells[i][val], cells[i][val+1], G);
-	   }
-        }
+	  for (int j = boxes[box].first.x; j <= boxes[box].second.x; j++)
+	    {
+	      cells[j + i * size.width].push_back (box);
+	    }
+	}
     }
 
-
-    std::vector<int> component(num_vertices(G));
-    int num = connected_components(G, &component[0]);
-    
-    std::vector<int>::size_type i;
-    
-    //merging BB
-    for (int i=0;i<num;i++)
+  //Creating the graph
+  for (int i = 0; i < cells.size (); i++)
     {
-      bool compFound = false;
-      int minx = INT_MAX;
-      int miny = INT_MAX;
-      int maxx = INT_MIN;
-      int maxy = INT_MIN;
-
-       for(int j=0;j<component.size();j++)
-       {
-             if(component[j] == i)
-	     {
-		      miny = std::min (miny, boxes[j].first.y);
-		      minx = std::min (minx, boxes[j].first.x);
-		      maxy = std::max (maxy, boxes[j].second.y);
-		      maxx = std::max (maxx, boxes[j].second.x);
-		      compFound = true;
-	     }
-       }
-       if(compFound)
-       {
-	       CvPoint
-		 p0 = cvPoint (minx, miny);
-	       CvPoint
-		 p1 = cvPoint (maxx, maxy);
-	       std::pair < CvPoint, CvPoint > pair (p0, p1);
-	       mergedBB.push_back(pair);
-       }
+      if (cells[i].size () > 2)
+	{
+	  for (int val = 1; val < cells[i].size () - 1; val++)
+	    {
+	      add_edge (cells[i][val], cells[i][val + 1], G);
+	    }
+	}
     }
 
-    std::cout << "mergedBB size " << mergedBB.size() << std::endl;
-    return mergedBB;
+
+  std::vector < int >
+  component (num_vertices (G));
+  int
+    num = connected_components (G, &component[0]);
+
+  std::vector < int >::size_type
+    i;
+
+  //merging BB
+  for (int i = 0; i < num; i++)
+    {
+      bool
+	compFound = false;
+      int
+	minx = INT_MAX;
+      int
+	miny = INT_MAX;
+      int
+	maxx = INT_MIN;
+      int
+	maxy = INT_MIN;
+
+      for (int j = 0; j < component.size (); j++)
+	{
+	  if (component[j] == i)
+	    {
+	      miny = std::min (miny, boxes[j].first.y);
+	      minx = std::min (minx, boxes[j].first.x);
+	      maxy = std::max (maxy, boxes[j].second.y);
+	      maxx = std::max (maxx, boxes[j].second.x);
+	      compFound = true;
+	    }
+	}
+      if (compFound)
+	{
+	  CvPoint p0 = cvPoint (minx, miny);
+	  CvPoint p1 = cvPoint (maxx, maxy);
+	  std::pair < CvPoint, CvPoint > pair (p0, p1);
+	  mergedBB.push_back (pair);
+	}
+    }
+
+  std::cout << "mergedBB size " << mergedBB.size () << std::endl;
+  return mergedBB;
 }
 
-std::vector < std::pair < CvPoint, CvPoint > >
-renderChainsWithBoxes (IplImage * SWTImage,
-		       std::vector < std::vector < Point2d > >&components,
-		       std::vector < Chain > &chains,
-		       std::vector < std::pair < Point2d, Point2d > >&compBB,
-		       IplImage * output)
+std::vector < std::pair < CvPoint,
+  CvPoint > >renderChainsWithBoxes (IplImage * SWTImage,
+				    std::vector < std::vector < Point2d >
+				    >&components,
+				    std::vector < Chain > &chains,
+				    std::vector < std::pair < Point2d,
+				    Point2d > >&compBB, IplImage * output)
 {
   // keep track of included components
   std::vector < bool > included;
@@ -431,28 +440,31 @@ renderChainsWithBoxes (IplImage * SWTImage,
   IplImage *
     outTemp = cvCreateImage (cvGetSize (output), IPL_DEPTH_32F, 1);
 
-  std::cout << componentsRed.
-    size () << " components after chaining" << std::endl;
+  std::cout << componentsRed.size () << " components after chaining" << std::
+    endl;
   renderComponents (SWTImage, componentsRed, outTemp);
   std::vector < std::pair < CvPoint, CvPoint > >bb;
   bb = findBoundingBoxes (components, chains, compBB, outTemp);
 
   cvReleaseImage (&outTemp);
 
-  int count = 0;
+  int
+    count = 0;
   for (std::vector < std::pair < CvPoint, CvPoint > >::iterator it =
        bb.begin (); it != bb.end (); it++)
     {
-      CvScalar
-	c;
-      if (count % 3 == 0) c=cvScalar(255,0,0);
-         else if (count % 3 == 1) c=cvScalar(0,255,0);
-         else c=cvScalar(0,0,255);
-         count++; 
+      CvScalar c;
+      if (count % 3 == 0)
+	c = cvScalar (255, 0, 0);
+      else if (count % 3 == 1)
+	c = cvScalar (0, 255, 0);
+      else
+	c = cvScalar (0, 0, 255);
+      count++;
       cvRectangle (output, it->first, it->second, c, 2);
     }
 
- return bb;
+  return bb;
 }
 
 void
@@ -484,8 +496,8 @@ renderChains (IplImage * SWTImage,
 	  componentsRed.push_back (components[i]);
 	}
     }
-  std::cout << componentsRed.
-    size () << " components after chaining" << std::endl;
+  std::cout << componentsRed.size () << " components after chaining" << std::
+    endl;
   IplImage *
     outTemp = cvCreateImage (cvGetSize (output), IPL_DEPTH_32F, 1);
   renderComponents (SWTImage, componentsRed, outTemp);
@@ -493,21 +505,32 @@ renderChains (IplImage * SWTImage,
 
 }
 
-std::vector < std::pair < CvPoint, CvPoint > >
-textDetection (IplImage * in, bool dark_on_light,
-	       IplImage * grayImage, IplImage * edgeImage,
-	       IplImage * gradientX, IplImage * gradientY,
-	       float chain_strictness_pi,
-	       float denom_pi_swt_acceptation_angle, float max_color_dist)
+std::vector < std::pair < CvPoint, CvPoint > >textDetection (IplImage * in,
+							     bool
+							     dark_on_light,
+							     IplImage *
+							     grayImage,
+							     IplImage *
+							     edgeImage,
+							     IplImage *
+							     gradientX,
+							     IplImage *
+							     gradientY,
+							     float
+							     chain_strictness_pi,
+							     float
+							     denom_pi_swt_acceptation_angle,
+							     float
+							     max_color_dist)
 {
   assert (in->depth == IPL_DEPTH_8U);
   assert (in->nChannels == 3);
 
-  IplImage * input = cvCreateImage(cvGetSize(in), IPL_DEPTH_8U, 3);
-  input  = cvCloneImage(in);
+  IplImage *
+    input = cvCreateImage (cvGetSize (in), IPL_DEPTH_8U, 3);
+  input = cvCloneImage (in);
 
-  std::
-    cout << "Running textDetection with dark_on_light " << dark_on_light <<
+  std::cout << "Running textDetection with dark_on_light " << dark_on_light <<
     std::endl;
 
   // Calculate SWT and return ray vectors
@@ -523,38 +546,32 @@ textDetection (IplImage * in, bool dark_on_light,
 	  *ptr++ = -1;
 	}
     }
-  strokeWidthTransform (edgeImage, gradientX, gradientY,
-                        dark_on_light, SWTImage, rays, 
-                        denom_pi_swt_acceptation_angle);
+  strokeWidthTransform (edgeImage, input, gradientX, gradientY,
+			dark_on_light, SWTImage, rays,
+			denom_pi_swt_acceptation_angle);
   SWTMedianFilter (SWTImage, rays);
 
-  DEBUG(
-   IplImage *
-     output2 = cvCreateImage (cvGetSize (input), IPL_DEPTH_32F, 1);
-   normalizeImage (SWTImage, output2);
-   IplImage *
-     saveSWT = cvCreateImage (cvGetSize (input), IPL_DEPTH_8U, 1);
-   cvConvertScale (output2, saveSWT, 255, 0);
-   
-   if(dark_on_light)
-	{
-	   cvSaveImage ("SWT_0.png", saveSWT);
-	   writePseudoImage(saveSWT, std::string("pseudo_SWT_0.png"));
-	}
-   else
-	{
-	   cvSaveImage ("SWT_1.png", saveSWT);
-	   writePseudoImage(saveSWT, std::string("pseudo_SWT_1.png"));
-	}
-   cvReleaseImage (&output2);
-   cvReleaseImage (&saveSWT);
-  )
+  DEBUG (IplImage *
+	 output2 = cvCreateImage (cvGetSize (input), IPL_DEPTH_32F, 1);
+	 normalizeImage (SWTImage, output2);
+	 IplImage *
+	 saveSWT = cvCreateImage (cvGetSize (input), IPL_DEPTH_8U, 1);
+	 cvConvertScale (output2, saveSWT, 255, 0); 
+	 if (dark_on_light)
+	 {
+	 cvSaveImage ("SWT_0.png", saveSWT);
+	 writePseudoImage (saveSWT, std::string ("pseudo_SWT_0.png"));}
+	 else
+	 {
+	 cvSaveImage ("SWT_1.png", saveSWT);
+	 writePseudoImage (saveSWT, std::string ("pseudo_SWT_1.png"));}
+	 cvReleaseImage (&output2); cvReleaseImage (&saveSWT);)
 
-  // Calculate legally connect components from SWT and gradient image.
-  // return type is a vector of vectors, where each outer vector is a component and
-  // the inner vector contains the (y,x) of each pixel in that component.
-  std::vector < std::vector < Point2d > >components =
-    findLegallyConnectedComponents (SWTImage,input, rays);
+    // Calculate legally connect components from SWT and gradient image.
+    // return type is a vector of vectors, where each outer vector is a component and
+    // the inner vector contains the (y,x) of each pixel in that component.
+    std::vector < std::vector < Point2d > >components =
+      findLegallyConnectedComponents (SWTImage, input, rays);
 
   // Filter the components
   std::vector < std::vector < Point2d > >validComponents;
@@ -568,43 +585,40 @@ textDetection (IplImage * in, bool dark_on_light,
 
 
 
-  DEBUG(
-  IplImage *
-    output3 = cvCreateImage (cvGetSize (input), 8U, 3);
-   renderComponentsWithBoxes (SWTImage, validComponents, compBB, output3);
-   if(dark_on_light)
-	   cvSaveImage ("components_0.png", output3);
-   else
-	   cvSaveImage ("components_1.png",output3);
-   cvReleaseImage (&output3);
-  )
+  DEBUG (IplImage *
+	 output3 = cvCreateImage (cvGetSize (input), 8U, 3);
+	 renderComponentsWithBoxes (SWTImage, validComponents, compBB,
+				    output3);
+	 if (dark_on_light) cvSaveImage ("components_0.png", output3);
+	 else
+	 cvSaveImage ("components_1.png", output3);
+	 cvReleaseImage (&output3);)
 
 
 
-  // Make chains of components
-  std::vector < Chain > chains;
+    // Make chains of components
+    std::vector < Chain > chains;
   chains =
     makeChains (input, validComponents, compCenters, compMedians,
 		compDimensions, compBB, chain_strictness_pi, max_color_dist);
 
-  std::vector < std::pair < CvPoint, CvPoint > > tempBB;
+  std::vector < std::pair < CvPoint, CvPoint > >tempBB;
 
-  tempBB = renderChainsWithBoxes (SWTImage, validComponents, chains, compBB,input);
-  
-  DEBUG(
-	if(dark_on_light)
-     	    cvSaveImage("render_1.png",input);
-	else
-	    cvSaveImage("render_0.png",input);
-       )
+  tempBB =
+    renderChainsWithBoxes (SWTImage, validComponents, chains, compBB, input);
 
-  cvReleaseImage (&input);
+  DEBUG (if (dark_on_light) cvSaveImage ("render_1.png", input);
+	 else
+	 cvSaveImage ("render_0.png", input);)
+
+    cvReleaseImage (&input);
   cvReleaseImage (&SWTImage);
   return tempBB;
 }
 
 void
 strokeWidthTransform (IplImage * edgeImage,
+		      IplImage * colorImage,
 		      IplImage * gradientX,
 		      IplImage * gradientY,
 		      bool dark_on_light,
@@ -624,11 +638,9 @@ strokeWidthTransform (IplImage * edgeImage,
 	{
 	  if (*ptr > 0)
 	    {
-	      Ray
-		r;
+	      Ray r;
 
-	      Point2d
-		p;
+	      Point2d p;
 	      p.x = col;
 	      p.y = row;
 	      r.p = p;
@@ -663,6 +675,9 @@ strokeWidthTransform (IplImage * edgeImage,
 		  G_y = G_y / mag;
 		}
 
+
+      	      
+
 	      while (true)
 		{
 		  curX += G_x * prec;
@@ -678,25 +693,12 @@ strokeWidthTransform (IplImage * edgeImage,
 			{
 			  break;
 			}
-		      Point2d
-			pnew;
+		      Point2d pnew;
 		      pnew.x = curPixX;
 		      pnew.y = curPixY;
 		      points.push_back (pnew);
 
-		      if(points.size()>=2)
-		         {
-		         /*if(abs(points[0].y - points[points.size()-1].y) > 50)
-		         break;
-		         if(abs(points[0].x - points[points.size()-1].x) > 50)
-		         break;*/
-			  
-                         /*if(sqrt((points[0].x-points[points.size()-1].x)*(points[0].x-points[points.size()-1].x)+
-				(points[0].y-points[points.size()-1].y)*(points[0].y-points[points.size()-1].y))> 
-					std::min(SWTImage->width/2, SWTImage->height/2))
-				break;*/
-   		
-		         } 
+
 
 		      if (CV_IMAGE_ELEM (edgeImage, uchar, curPixY, curPixX) >
 			  0)
@@ -704,13 +706,11 @@ strokeWidthTransform (IplImage * edgeImage,
 			  r.q = pnew;
 			  // dot product
 			  float
-			    G_xt =
-			    CV_IMAGE_ELEM (gradientX, float, curPixY,
-					   curPixX);
+			    G_xt = CV_IMAGE_ELEM (gradientX, float, curPixY,
+						  curPixX);
 			  float
-			    G_yt =
-			    CV_IMAGE_ELEM (gradientY, float, curPixY,
-					   curPixX);
+			    G_yt = CV_IMAGE_ELEM (gradientY, float, curPixY,
+						  curPixX);
 			  mag = sqrt ((G_xt * G_xt) + (G_yt * G_yt));
 			  if (dark_on_light)
 			    {
@@ -727,6 +727,55 @@ strokeWidthTransform (IplImage * edgeImage,
 			  if (acos (G_x * -G_xt + G_y * -G_yt) <
 			      PI / (float) denom_pi_acceptation_angle)
 			    {
+
+
+			      if (points.size () >= 10)
+				{
+				    bool badRay = false; 
+				    std::vector<Point3dFloat> rayColors;
+				    Point3dFloat color,mean;
+				    mean.x = mean.y = mean.z = 0;					
+				    for(int i=4;i<points.size()-5;i++)
+				    {
+					    color.x = (float) CV_IMAGE_ELEM(colorImage, unsigned char, points[i].y,
+				                                            (points[i].x)*3);
+					    color.y = (float) CV_IMAGE_ELEM(colorImage, unsigned char, points[i].y,
+				                                            (points[i].x)*3+1);
+					    color.z = (float) CV_IMAGE_ELEM(colorImage, unsigned char, points[i].y,
+				                                            (points[i].x)*3+2);
+					    rayColors.push_back(color);
+
+					    mean.x += color.x;
+					    mean.y += color.y;
+					    mean.z += color.z;
+				    }
+                       	             
+                                    mean.x = mean.x / ((float) rayColors.size());
+     				    mean.y = mean.y / ((float) rayColors.size());
+     				    mean.z = mean.z / ((float) rayColors.size());
+
+				    if(rayColors.size()>= 2)
+				    {
+					for(int i=0;i< rayColors.size();i++)
+					{
+		                          if((abs(mean.x - rayColors[i].x) > 80)
+                                              || (abs(mean.y - rayColors[i].y) > 80 ) 
+		                              || ( abs(mean.z - rayColors[i].z) > 80))
+					   {
+						badRay = true;
+						break;
+					   }
+					}
+					if(badRay)
+    					   break;
+				    }
+				}
+
+
+
+
+
+
 			      float
 				length =
 				sqrt (((float) r.q.x -
@@ -756,8 +805,12 @@ strokeWidthTransform (IplImage * edgeImage,
 								 pit->x));
 				    }
 				}
-			      r.points = points;
-			      rays.push_back (r);
+			
+			      
+
+			      
+			       r.points = points;
+			       rays.push_back (r);
 			    }
 			  break;
 			}
@@ -836,8 +889,7 @@ std::vector < std::vector < Point2d >
 	  if (*ptr > 0)
 	    {
 	      map[row * SWTImage->width + col] = num_vertices;
-	      Point2d
-		p;
+	      Point2d p;
 	      p.x = col;
 	      p.y = row;
 	      revmap[num_vertices] = p;
@@ -847,8 +899,7 @@ std::vector < std::vector < Point2d >
 	}
     }
 
-  Graph
-  g (num_vertices);
+  Graph g (num_vertices);
 
   for (int row = 0; row < SWTImage->height; row++)
     {
@@ -930,8 +981,7 @@ std::vector < std::vector < Point2d >
 
   std::vector < std::vector < Point2d > >components;
   components.reserve (num_comp);
-  std::
-    cout << "Before filtering, " << num_comp << " components and " <<
+  std::cout << "Before filtering, " << num_comp << " components and " <<
     num_vertices << " vertices" << std::endl;
   for (int j = 0; j < num_comp; j++)
     {
@@ -940,8 +990,7 @@ std::vector < std::vector < Point2d >
     }
   for (int j = 0; j < num_vertices; j++)
     {
-      Point2d
-	p = revmap[j];
+      Point2d p = revmap[j];
       (components[c[j]]).push_back (p);
     }
 
@@ -1101,23 +1150,19 @@ filterComponents (IplImage * SWTImage,
       const int
 	num_nodes = it->size ();
 
-      Point2dFloat
-	center;
+      Point2dFloat center;
       center.x = ((float) (maxx + minx)) / 2.0;
       center.y = ((float) (maxy + miny)) / 2.0;
 
-      Point2d
-	dimensions;
+      Point2d dimensions;
       dimensions.x = maxx - minx + 1;
       dimensions.y = maxy - miny + 1;
 
-      Point2d
-	bb1;
+      Point2d bb1;
       bb1.x = minx;
       bb1.y = miny;
 
-      Point2d
-	bb2;
+      Point2d bb2;
       bb2.x = maxx;
       bb2.y = maxy;
       std::pair < Point2d, Point2d > pair (bb1, bb2);
@@ -1177,8 +1222,9 @@ filterComponents (IplImage * SWTImage,
   validComponents.reserve (tempComp.size ());
   compBB.reserve (tempComp.size ());
 
-  std::cout << "After filtering " << validComponents.
-    size () << " components" << std::endl;
+  std::
+    cout << "After filtering " << validComponents.size () << " components" <<
+    std::endl;
 }
 
 bool
@@ -1287,18 +1333,14 @@ std::vector < Chain > makeChains (IplImage * colorImage,
 
 	      if (dist <
 		  9 *
-		  (float) (std::
-			   max (std::
-				min (compDimensions[i].x,
-				     compDimensions[i].y),
-				std::min (compDimensions[j].x,
-					  compDimensions[j].y))) *
-		  (float) (std::
-			   max (std::
-				min (compDimensions[i].x,
-				     compDimensions[i].y),
-				std::min (compDimensions[j].x,
-					  compDimensions[j].y)))
+		  (float) (std::max (std::min (compDimensions[i].x,
+					       compDimensions[i].y),
+				     std::min (compDimensions[j].x,
+					       compDimensions[j].y))) *
+		  (float) (std::max (std::min (compDimensions[i].x,
+					       compDimensions[i].y),
+				     std::min (compDimensions[j].x,
+					       compDimensions[j].y)))
 		  && colorDist < max_color_dist)
 		{
 
@@ -1550,8 +1592,7 @@ main (int argc, char *argv[])
 {
   if ((argc != 8))
     {
-      std::
-	cout << "usage: " << argv[0] <<
+      std::cout << "usage: " << argv[0] <<
 	" <imagefile> <resultImage> <canny_low> <canny_high> <chain_strictness PI/X*100> <SWT acceptation PI/X * 100> <max color dist> "
 	<< std::endl;
       return -1;
@@ -1563,9 +1604,8 @@ main (int argc, char *argv[])
   float swt_acceptation_denom = atoi (argv[6]) / 100.0f;
   int max_color_dist = atoi (argv[7]);
 
-  std::
-    cout << "Parameters:\n \t Input File " << argv[1] << "\n \t Canny Low " <<
-    canny_low << "\n \t Canny High " << canny_high <<
+  std::cout << "Parameters:\n \t Input File " << argv[1] << "\n \t Canny Low "
+    << canny_low << "\n \t Canny High " << canny_high <<
     "\n \t Chain Strictness " << chain_strictness <<
     "\n \t SWT acceptation denom " << swt_acceptation_denom <<
     "\n \t Max Color dist " << max_color_dist << std::endl;
@@ -1586,7 +1626,7 @@ main (int argc, char *argv[])
 
   cvSmooth (grayImage, grayImage, CV_GAUSSIAN, 3, 3);
   cvCanny (grayImage, edgeImage, atoi (argv[3]), atoi (argv[4]), 3);
-  DEBUG(cvSaveImage ("edgeimage.png", edgeImage));
+  DEBUG (cvSaveImage ("edgeimage.png", edgeImage));
 
 
   IplImage *gaussianImage =
@@ -1609,26 +1649,28 @@ main (int argc, char *argv[])
       std::cout << "couldn't load query image" << std::endl;
       return -1;
     }
-  std::vector < std::pair < CvPoint, CvPoint > > temp1, temp2, bb;
+  std::vector < std::pair < CvPoint, CvPoint > >temp1, temp2, bb;
 
   temp1 = textDetection (in1_4, 1, grayImage, edgeImage, gradientX, gradientY,
-		 (float) atoi (argv[5]) / 100.0,
-		 (float) atoi (argv[6]) / 100.0, (float) atoi (argv[7]));
-  temp2 = textDetection (in1_4, 0, grayImage, edgeImage, gradientX, gradientY,
-		 (float) atoi (argv[5]) / 100.0,
-		 (float) atoi (argv[6]) / 100.0, (float) atoi (argv[7]));
+			 (float) atoi (argv[5]) / 100.0,
+			 (float) atoi (argv[6]) / 100.0,
+			 (float) atoi (argv[7]));
+  temp2 =
+    textDetection (in1_4, 0, grayImage, edgeImage, gradientX, gradientY,
+		   (float) atoi (argv[5]) / 100.0,
+		   (float) atoi (argv[6]) / 100.0, (float) atoi (argv[7]));
 
 
-  for(int i=0;i<temp2.size();i++)
-  {
-    temp1.push_back(temp2[i]);
-  }
-  bb = mergeBoundingBoxes(temp1,cvGetSize(in1_4));
+  for (int i = 0; i < temp2.size (); i++)
+    {
+      temp1.push_back (temp2[i]);
+    }
+  bb = mergeBoundingBoxes (temp1, cvGetSize (in1_4));
 
   for (std::vector < std::pair < CvPoint, CvPoint > >::iterator it =
        bb.begin (); it != bb.end (); it++)
     {
-      cvRectangle (in1_4, it->first, it->second, cvScalar(0,255,0), 2);
+      cvRectangle (in1_4, it->first, it->second, cvScalar (0, 255, 0), 2);
     }
 
   cvResize (in1_4, in1);
