@@ -358,7 +358,7 @@ std::vector < std::pair < CvPoint,
 	}
        else if(cells[i].size() == 2)
 	{
-	  mergedBB.push_back(boxes[cells[i][1]]);
+	  add_edge(cells[i][1],cells[i][1],G);
 	}
     }
 
