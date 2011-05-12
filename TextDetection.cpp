@@ -729,7 +729,7 @@ strokeWidthTransform (IplImage * edgeImage,
 			    {
 
 
-			      if (points.size () >= 10)
+			      /*if (points.size () >= 10)
 				{
 				    bool badRay = false; 
 				    std::vector<Point3dFloat> rayColors;
@@ -769,7 +769,7 @@ strokeWidthTransform (IplImage * edgeImage,
 					if(badRay)
     					   break;
 				    }
-				}
+				}*/
 
 
 
