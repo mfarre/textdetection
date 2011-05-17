@@ -700,6 +700,8 @@ strokeWidthTransform (IplImage * edgeImage,
   // First pass
   float
     prec = .05;
+  float 
+    max = 0;
   for (int row = 0; row < edgeImage->height; row++)
     {
       const uchar *
@@ -805,7 +807,7 @@ strokeWidthTransform (IplImage * edgeImage,
 	       						(float) r.p.y) * ((float) r.q.y -
 					   	        (float) r.p.y));
 
-
+			       max = std::max ( max, r.length);
 			       r.points = points;
 			       rays.push_back (r);
 			    }
@@ -827,7 +829,7 @@ strokeWidthTransform (IplImage * edgeImage,
 
      for(int i=0; i< rays.size();i++)
      {
-        if(rays[i].length > 100)
+        if(rays[i].length > max/3.0)
 	        raysBadColor.push_back(rays[i]);
      }
 
@@ -837,7 +839,7 @@ strokeWidthTransform (IplImage * edgeImage,
        cvCreateImage (cvGetSize(colorImage), colorImage->depth,
 		   colorImage->nChannels);
 
-       for(int i=0;i<raysBadColor.size();i++)
+ /*      for(int i=0;i<raysBadColor.size();i++)
 	{
            cvLine(badRaysScheme, cvPoint(raysBadColor[i].p.x,raysBadColor[i].p.y),cvPoint(raysBadColor[i].q.x,raysBadColor[i].q.y), CV_RGB(0,255,0));
 	}
@@ -846,7 +848,7 @@ strokeWidthTransform (IplImage * edgeImage,
        		cvSaveImage("lineTest_0.png",badRaysScheme);
        else
        		cvSaveImage("lineTest_1.png",badRaysScheme);
-       cvReleaseImage(&badRaysScheme);
+       cvReleaseImage(&badRaysScheme);*/
      
 
 /*    for(int j=0;j<rays.size();j++)
