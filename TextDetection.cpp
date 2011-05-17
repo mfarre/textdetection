@@ -61,6 +61,66 @@ loadByteImage (const char *name)
   return image;
 }
 
+
+
+//GEOMETRIC FUNCTIONS
+
+float orientation2D(const Point2d& p, const Point2d& q, const Point2d& r)
+{
+	float area = (((float)q.x - (float)p.x) * ((float)r.y - (float)p.y)) - (((float)r.x - (float)p.x) * ((float)q.y - (float)p.y));
+	return area;
+}
+
+bool classifyIntersection( Ray r1, Ray r2)
+{
+    for(int i=0;i<r1.points.size();i++)
+    {
+      for(int j=0;j<r2.points.size();j++)
+      {
+         if((r1.points[i].x == r2.points[j].x)&&(r1.points[i].y == r2.points[j].y))
+         {
+           return true;
+         }
+      }
+    }
+    return false;
+}
+
+bool classifyIntersection(Point2d p0, Point2d p1, Point2d q0, Point2d q1)
+{
+
+
+	float first = orientation2D(p0, p1, q0);
+	float second = orientation2D(p0, p1, q1);
+	
+	//Segments are crossing
+	if(first*second<0){
+		//check again inverting points
+		float first2 = orientation2D(q0, q1, p0);
+		float second2 = orientation2D(q0, q1, p1);
+		//crossing
+		if (first2*second2<0){				
+			return true;
+			}
+		//in contact by a point
+		else if(first2 ==0 || second2 ==0){
+			return false;
+			}
+	 	else {
+			return false;
+			}
+	}
+}
+
+
+
+//
+
+
+
+
+
+
 std::vector < std::pair < CvPoint,
   CvPoint > >findBoundingBoxes (std::vector < std::vector < Point2d >
 				>&components, std::vector < Chain > &chains,
@@ -611,13 +671,20 @@ std::vector < std::pair < CvPoint, CvPoint > >textDetection (IplImage * in,
   tempBB =
     renderChainsWithBoxes (SWTImage, validComponents, chains, compBB, input);
 
-  DEBUG (if (dark_on_light) cvSaveImage ("render_1.png", input);
+  DEBUG (if (dark_on_light) cvSaveImage ("render_0.png", input);
 	 else
-	 cvSaveImage ("render_0.png", input);)
+	 cvSaveImage ("render_1.png", input);)
 
     cvReleaseImage (&input);
   cvReleaseImage (&SWTImage);
   return tempBB;
+}
+
+
+bool
+vector2dSort (const Ray& r1, const Ray& r2)
+{
+   return  r1.length < r2.length;
 }
 
 void
@@ -704,8 +771,8 @@ strokeWidthTransform (IplImage * edgeImage,
 
 
 
-		      if (CV_IMAGE_ELEM (edgeImage, uchar, curPixY, curPixX) >
-			  0)
+		      if (CV_IMAGE_ELEM (edgeImage, uchar, curPixY, curPixX) ==
+			  255)
 			{
 			  r.q = pnew;
 			  // dot product
@@ -732,87 +799,13 @@ strokeWidthTransform (IplImage * edgeImage,
 			      PI / (float) denom_pi_acceptation_angle)
 			    {
 
-
-			      /*if (points.size () >= 10)
-				{
-				    bool badRay = false; 
-				    std::vector<Point3dFloat> rayColors;
-				    Point3dFloat color,mean;
-				    mean.x = mean.y = mean.z = 0;					
-				    for(int i=4;i<points.size()-5;i++)
-				    {
-					    color.x = (float) CV_IMAGE_ELEM(colorImage, unsigned char, points[i].y,
-				                                            (points[i].x)*3);
-					    color.y = (float) CV_IMAGE_ELEM(colorImage, unsigned char, points[i].y,
-				                                            (points[i].x)*3+1);
-					    color.z = (float) CV_IMAGE_ELEM(colorImage, unsigned char, points[i].y,
-				                                            (points[i].x)*3+2);
-					    rayColors.push_back(color);
-
-					    mean.x += color.x;
-					    mean.y += color.y;
-					    mean.z += color.z;
-				    }
-                       	             
-                                    mean.x = mean.x / ((float) rayColors.size());
-     				    mean.y = mean.y / ((float) rayColors.size());
-     				    mean.z = mean.z / ((float) rayColors.size());
-
-				    if(rayColors.size()>= 2)
-				    {
-					for(int i=0;i< rayColors.size();i++)
-					{
-		                          if((abs(mean.x - rayColors[i].x) > 80)
-                                              || (abs(mean.y - rayColors[i].y) > 80 ) 
-		                              || ( abs(mean.z - rayColors[i].z) > 80))
-					   {
-						badRay = true;
-						break;
-					   }
-					}
-					if(badRay)
-    					   break;
-				    }
-				}*/
+			       r.length = 	sqrt (((float) r.q.x -
+	       						(float) r.p.x) * ((float) r.q.x -
+               						(float) r.p.x) + ((float) r.q.y -
+	       						(float) r.p.y) * ((float) r.q.y -
+					   	        (float) r.p.y));
 
 
-
-
-
-
-			      float
-				length =
-				sqrt (((float) r.q.x -
-				       (float) r.p.x) * ((float) r.q.x -
-							 (float) r.p.x) +
-				      ((float) r.q.y -
-				       (float) r.p.y) * ((float) r.q.y -
-							 (float) r.p.y));
-			      for (std::vector < Point2d >::iterator pit =
-				   points.begin (); pit != points.end ();
-				   pit++)
-				{
-				  if (CV_IMAGE_ELEM
-				      (SWTImage, float, pit->y, pit->x) < 0)
-				    {
-				      CV_IMAGE_ELEM (SWTImage, float, pit->y,
-						     pit->x) = length;
-				    }
-				  else
-				    {
-				      CV_IMAGE_ELEM (SWTImage, float, pit->y,
-						     pit->x) =
-					std::min (length,
-						  CV_IMAGE_ELEM (SWTImage,
-								 float,
-								 pit->y,
-								 pit->x));
-				    }
-				}
-			
-			      
-
-			      
 			       r.points = points;
 			       rays.push_back (r);
 			    }
@@ -824,6 +817,177 @@ strokeWidthTransform (IplImage * edgeImage,
 	  ptr++;
 	}
     }
+
+
+     std::vector<Ray> raysBadColor;
+     std::sort(rays.begin(),rays.end(),&vector2dSort);
+
+
+
+
+     for(int i=0; i< rays.size();i++)
+     {
+        if(rays[i].length > 100)
+	        raysBadColor.push_back(rays[i]);
+     }
+
+
+  
+       IplImage *badRaysScheme =
+       cvCreateImage (cvGetSize(colorImage), colorImage->depth,
+		   colorImage->nChannels);
+
+       for(int i=0;i<raysBadColor.size();i++)
+	{
+           cvLine(badRaysScheme, cvPoint(raysBadColor[i].p.x,raysBadColor[i].p.y),cvPoint(raysBadColor[i].q.x,raysBadColor[i].q.y), CV_RGB(0,255,0));
+	}
+
+       if(dark_on_light)
+       		cvSaveImage("lineTest_0.png",badRaysScheme);
+       else
+       		cvSaveImage("lineTest_1.png",badRaysScheme);
+       cvReleaseImage(&badRaysScheme);
+     
+
+/*    for(int j=0;j<rays.size();j++)
+     {
+
+      if (rays[j].points.size () >= 10)
+	{
+	    std::vector<Point3dFloat> rayColors;
+	    Point3dFloat color,mean;
+	    mean.x = mean.y = mean.z = 0;					
+	    for(int i=4;i<rays[j].points.size()-5;i++)
+	    {
+		    color.x = (float) CV_IMAGE_ELEM(colorImage, unsigned char, rays[j].points[i].y,
+	                                            (rays[j].points[i].x)*3);
+		    color.y = (float) CV_IMAGE_ELEM(colorImage, unsigned char, rays[j].points[i].y,
+	                                            (rays[j].points[i].x)*3+1);
+		    color.z = (float) CV_IMAGE_ELEM(colorImage, unsigned char, rays[j].points[i].y,
+	                                            (rays[j].points[i].x)*3+2);
+		    rayColors.push_back(color);
+
+		    mean.x += color.x;
+		    mean.y += color.y;
+		    mean.z += color.z;
+	    }
+             
+            mean.x = mean.x / ((float) rayColors.size());
+	    mean.y = mean.y / ((float) rayColors.size());
+	    mean.z = mean.z / ((float) rayColors.size());
+
+	    if(rayColors.size()>= 2)
+	    {
+		for(int i=0;i< rayColors.size();i++)
+		{
+                  if((abs(mean.x - rayColors[i].x) > 80)
+                      || (abs(mean.y - rayColors[i].y) > 80 ) 
+                      || ( abs(mean.z - rayColors[i].z) > 80))
+		   {
+			raysBadColor.push_back(rays[j]);
+			break;
+		   }
+		}
+	    }
+	}
+       }*/
+
+    std::vector<Ray> newRays;
+    std::vector<int> intersected(rays.size(),0);
+    std::vector< vector<int> > badRayIntersected;
+
+    //initialize
+    for(int i=0;i<raysBadColor.size();i++)
+    {
+      vector<int> v;
+      v.push_back(-1);
+      badRayIntersected.push_back(v);
+    }
+
+    for (int i =0; i< rays.size();i++)
+    {
+      for(int k=0;k<raysBadColor.size();k++)
+      {
+         if((rays[i].p.x == raysBadColor[k].p.x)&&(rays[i].p.y == raysBadColor[k].p.y)&&(rays[i].q.x == raysBadColor[k].q.x)&&
+	    (rays[i].q.y == raysBadColor[k].q.y))
+	 {
+           // it is a bad ray
+	   continue;
+	 }	
+         if(classifyIntersection(rays[i].p,rays[i].q,raysBadColor[k].p,raysBadColor[k].q))
+	  {
+	    badRayIntersected[k].push_back(i);
+	    intersected[i]++;
+	  }
+		
+      }
+    }
+
+    #define INTERSECTIONS 2
+    
+    for (int i =0; i< rays.size();i++)
+    {
+        bool badRay = false;
+        int badRayNum = -1;
+        for(int k=0;k<raysBadColor.size();k++)
+        {
+          if((rays[i].p.x == raysBadColor[k].p.x)&&(rays[i].p.y == raysBadColor[k].p.y)&&(rays[i].q.x == raysBadColor[k].q.x)&&
+	     (rays[i].q.y == raysBadColor[k].q.y))
+	     {
+	 	badRay = true;
+                badRayNum = k;
+                break;
+             }
+	}
+      
+
+      if((intersected[i]>=INTERSECTIONS)&&(!badRay))
+      {
+	continue;
+      }
+      if(badRay)
+      {
+	   bool plot = false;
+	   for (int m=1;m<badRayIntersected[badRayNum].size();m++)
+	   {
+           	if(intersected[badRayIntersected[badRayNum][m]] < INTERSECTIONS )
+	 		   plot = true;		
+           }
+
+           if(!plot)
+             continue;
+      }
+      
+      newRays.push_back(rays[i]);
+
+      for (std::vector < Point2d >::iterator pit =
+	   rays[i].points.begin (); pit != rays[i].points.end ();
+	   pit++)
+	{
+
+
+	  if (CV_IMAGE_ELEM
+	      (SWTImage, float, pit->y, pit->x) < 0)
+	    {
+	      CV_IMAGE_ELEM (SWTImage, float, pit->y,
+			     pit->x) = rays[i].length;
+	    }
+	  else
+	    {
+	      CV_IMAGE_ELEM (SWTImage, float, pit->y,
+			     pit->x) =
+		std::min (rays[i].length,
+			  CV_IMAGE_ELEM (SWTImage,
+					 float,
+					 pit->y,
+					 pit->x));
+	    }
+	}
+     }	
+
+     rays = newRays;
+	
+
 
 }
 
@@ -863,6 +1027,8 @@ Point2dSort (const Point2d & lhs, const Point2d & rhs)
 {
   return lhs.SWT < rhs.SWT;
 }
+
+
 
 std::vector < std::vector < Point2d >
   >findLegallyConnectedComponents (IplImage * SWTImage,
@@ -1383,7 +1549,7 @@ std::vector < Chain > makeChains (IplImage * colorImage,
 	}
     }
   std::cout << chains.size () << " eligible pairs" << std::endl;
-  std::sort (chains.begin (), chains.end (), &chainSortDist);
+  //std::sort (chains.begin (), chains.end (), &chainSortDist);
 
   std::cerr << std::endl;
   float strictness = PI / strictness_pi;
@@ -1623,6 +1789,8 @@ main (int argc, char *argv[])
 		   in1->nChannels);
   cvResize (in1, in1_4);
 
+
+
   // Convert to grayscale
   IplImage *grayImage = cvCreateImage (cvGetSize (in1_4), IPL_DEPTH_8U, 1);
   cvCvtColor (in1_4, grayImage, CV_RGB2GRAY);
@@ -1631,7 +1799,6 @@ main (int argc, char *argv[])
   cvSmooth (grayImage, grayImage, CV_GAUSSIAN, 3, 3);
   cvCanny (grayImage, edgeImage, atoi (argv[3]), atoi (argv[4]), 3);
   DEBUG (cvSaveImage ("edgeimage.png", edgeImage));
-
 
   IplImage *gaussianImage =
     cvCreateImage (cvGetSize (in1_4), IPL_DEPTH_32F, 1);
@@ -1644,6 +1811,7 @@ main (int argc, char *argv[])
 
   cvSmooth (gradientX, gradientX, 3, 3);
   cvSmooth (gradientY, gradientY, 3, 3);
+
   cvReleaseImage (&gaussianImage);
   cvReleaseImage (&grayImage);
 

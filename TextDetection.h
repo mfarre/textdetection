@@ -36,6 +36,7 @@ struct Ray {
         Point2d p;
         Point2d q;
         std::vector<Point2d> points;
+	float length;
 };
 
 struct Point3dFloat {
