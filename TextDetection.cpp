@@ -1708,8 +1708,17 @@ main (int argc, char *argv[])
     {
       temp1.push_back (temp2[i]);
     }
-
-  bb = mergeBoundingBoxes (temp1, cvGetSize (in1_4));
+  
+  bb = temp1;
+  int prevBBsize = bb.size();
+  while(1)
+  {
+     bb = mergeBoundingBoxes (bb, cvGetSize (in1_4)); 
+     if((prevBBsize - bb.size()) == 0)
+       break;
+     
+     prevBBsize = bb.size();
+  }
 
   for (std::vector < std::pair < CvPoint, CvPoint > >::iterator it =
        bb.begin (); it != bb.end (); it++)
