@@ -49,41 +49,12 @@
 using namespace std;
 
 
-IplImage *
-loadByteImage (const char *name)
-{
-  IplImage *image = cvLoadImage (name);
-
-  if (!image)
-    {
-      return 0;
-    }
-  return image;
-}
-
-
-
 //GEOMETRIC FUNCTIONS
 
 float orientation2D(const Point2d& p, const Point2d& q, const Point2d& r)
 {
 	float area = (((float)q.x - (float)p.x) * ((float)r.y - (float)p.y)) - (((float)r.x - (float)p.x) * ((float)q.y - (float)p.y));
 	return area;
-}
-
-bool classifyIntersection( Ray r1, Ray r2)
-{
-    for(int i=0;i<r1.points.size();i++)
-    {
-      for(int j=0;j<r2.points.size();j++)
-      {
-         if((r1.points[i].x == r2.points[j].x)&&(r1.points[i].y == r2.points[j].y))
-         {
-           return true;
-         }
-      }
-    }
-    return false;
 }
 
 bool classifyIntersection(Point2d p0, Point2d p1, Point2d q0, Point2d q1)
@@ -163,38 +134,6 @@ std::vector < std::pair < CvPoint,
   return bb;
 }
 
-std::vector < std::pair < CvPoint,
-  CvPoint > >findBoundingBoxes (std::vector < std::vector < Point2d >
-				>&components, IplImage * output)
-{
-  std::vector < std::pair < CvPoint, CvPoint > >bb;
-  bb.reserve (components.size ());
-  for (std::vector < std::vector < Point2d > >::iterator compit =
-       components.begin (); compit != components.end (); compit++)
-    {
-      int
-	minx = output->width;
-      int
-	miny = output->height;
-      int
-	maxx = 0;
-      int
-	maxy = 0;
-      for (std::vector < Point2d >::iterator it = compit->begin ();
-	   it != compit->end (); it++)
-	{
-	  miny = std::min (miny, it->y);
-	  minx = std::min (minx, it->x);
-	  maxy = std::max (maxy, it->y);
-	  maxx = std::max (maxx, it->x);
-	}
-      CvPoint p0 = cvPoint (minx, miny);
-      CvPoint p1 = cvPoint (maxx, maxy);
-      std::pair < CvPoint, CvPoint > pair (p0, p1);
-      bb.push_back (pair);
-    }
-  return bb;
-}
 
 void
 normalizeImage (IplImage * input, IplImage * output)
@@ -531,49 +470,10 @@ std::vector < std::pair < CvPoint,
   return bb;
 }
 
-void
-renderChains (IplImage * SWTImage,
-	      std::vector < std::vector < Point2d > >&components,
-	      std::vector < Chain > &chains, IplImage * output)
-{
-  // keep track of included components
-  std::vector < bool > included;
-  included.reserve (components.size ());
-  for (unsigned int i = 0; i != components.size (); i++)
-    {
-      included.push_back (false);
-    }
-  for (std::vector < Chain >::iterator it = chains.begin ();
-       it != chains.end (); it++)
-    {
-      for (std::vector < int >::iterator cit = it->components.begin ();
-	   cit != it->components.end (); cit++)
-	{
-	  included[*cit] = true;
-	}
-    }
-  std::vector < std::vector < Point2d > >componentsRed;
-  for (unsigned int i = 0; i != components.size (); i++)
-    {
-      if (included[i])
-	{
-	  componentsRed.push_back (components[i]);
-	}
-    }
-  std::cout << componentsRed.size () << " components after chaining" << std::
-    endl;
-  IplImage *
-    outTemp = cvCreateImage (cvGetSize (output), IPL_DEPTH_32F, 1);
-  renderComponents (SWTImage, componentsRed, outTemp);
-  cvConvertScale (outTemp, output, 255, 0);
-
-}
 
 std::vector < std::pair < CvPoint, CvPoint > >textDetection (IplImage * in,
 							     bool
 							     dark_on_light,
-							     IplImage *
-							     grayImage,
 							     IplImage *
 							     edgeImage,
 							     IplImage *
@@ -590,6 +490,16 @@ std::vector < std::pair < CvPoint, CvPoint > >textDetection (IplImage * in,
   assert (in->depth == IPL_DEPTH_8U);
   assert (in->nChannels == 3);
 
+  std::vector < std::vector < Point2d > >validComponents;
+  std::vector < std::pair < Point2d, Point2d > >compBB;
+  std::vector < Point2dFloat > compCenters;
+  std::vector < float > compMedians;
+  std::vector < Point2d > compDimensions;
+  std::vector < Chain > chains;
+  std::vector < std::pair < CvPoint, CvPoint > >tempBB;
+  std::vector < std::vector < Point2d > >components;
+  std::vector < Ray > rays;
+
   IplImage *
     input = cvCreateImage (cvGetSize (in), IPL_DEPTH_8U, 3);
   input = cvCloneImage (in);
@@ -598,9 +508,10 @@ std::vector < std::pair < CvPoint, CvPoint > >textDetection (IplImage * in,
     std::endl;
 
   // Calculate SWT and return ray vectors
-  std::vector < Ray > rays;
+
   IplImage *
     SWTImage = cvCreateImage (cvGetSize (input), IPL_DEPTH_32F, 1);
+
   for (int row = 0; row < input->height; row++)
     {
       float *
@@ -610,9 +521,13 @@ std::vector < std::pair < CvPoint, CvPoint > >textDetection (IplImage * in,
 	  *ptr++ = -1;
 	}
     }
+
+
   strokeWidthTransform (edgeImage, input, gradientX, gradientY,
 			dark_on_light, SWTImage, rays,
 			denom_pi_swt_acceptation_angle);
+
+
   SWTMedianFilter (SWTImage, rays);
 
   DEBUG (IplImage *
@@ -631,19 +546,17 @@ std::vector < std::pair < CvPoint, CvPoint > >textDetection (IplImage * in,
 	 writePseudoImage (saveSWT, std::string ("pseudo_SWT_1.png"));}
 	 cvReleaseImage (&output2); cvReleaseImage (&saveSWT);)
 
+
+
     // Calculate legally connect components from SWT and gradient image.
     // return type is a vector of vectors, where each outer vector is a component and
     // the inner vector contains the (y,x) of each pixel in that component.
-    std::vector < std::vector < Point2d > >components =
+
+  components =
       findLegallyConnectedComponents (SWTImage, input, rays);
 
   // Filter the components
-  std::vector < std::vector < Point2d > >validComponents;
-  std::vector < std::pair < Point2d, Point2d > >compBB;
-  std::vector < Point2dFloat > compCenters;
-  std::vector < float >
-    compMedians;
-  std::vector < Point2d > compDimensions;
+
   filterComponents (SWTImage, components, validComponents, compCenters,
 		    compMedians, compDimensions, compBB);
 
@@ -660,13 +573,10 @@ std::vector < std::pair < CvPoint, CvPoint > >textDetection (IplImage * in,
 
 
 
-    // Make chains of components
-    std::vector < Chain > chains;
+  // Make chains of components
   chains =
     makeChains (input, validComponents, compCenters, compMedians,
 		compDimensions, compBB, chain_strictness_pi, max_color_dist);
-
-  std::vector < std::pair < CvPoint, CvPoint > >tempBB;
 
   tempBB =
     renderChainsWithBoxes (SWTImage, validComponents, chains, compBB, input);
@@ -675,7 +585,8 @@ std::vector < std::pair < CvPoint, CvPoint > >textDetection (IplImage * in,
 	 else
 	 cvSaveImage ("render_1.png", input);)
 
-    cvReleaseImage (&input);
+
+  cvReleaseImage (&input);
   cvReleaseImage (&SWTImage);
   return tempBB;
 }
@@ -702,6 +613,7 @@ strokeWidthTransform (IplImage * edgeImage,
     prec = .05;
   float 
     max = 0;
+
   for (int row = 0; row < edgeImage->height; row++)
     {
       const uchar *
@@ -773,8 +685,7 @@ strokeWidthTransform (IplImage * edgeImage,
 
 
 
-		      if (CV_IMAGE_ELEM (edgeImage, uchar, curPixY, curPixX) ==
-			  255)
+		      if (CV_IMAGE_ELEM (edgeImage, uchar, curPixY, curPixX) > 0)
 			{
 			  r.q = pnew;
 			  // dot product
@@ -821,126 +732,82 @@ strokeWidthTransform (IplImage * edgeImage,
     }
 
 
-     std::vector<Ray> raysBadColor;
+     // First filtering of Rays, deleting possible outliers that cross more than INTERSECTION
+     #define INTERSECTIONS 2
+
+     std::vector<Ray> bigRays;
+     std::vector<Ray> newRays;
+     std::vector<int> intersected(rays.size(),0);
+     std::vector<int> bigRaysPositions;
+     std::vector< vector<int> > bigRaysIntersected;
+     int firstBigRayPosition=-1;
+     bool firstBigRayFound = false;
+
      std::sort(rays.begin(),rays.end(),&vector2dSort);
-
-
-
-
+    
      for(int i=0; i< rays.size();i++)
      {
         if(rays[i].length > max/3.0)
-	        raysBadColor.push_back(rays[i]);
+        {
+                if(!firstBigRayFound)
+                {
+                  firstBigRayFound = true;
+                  firstBigRayPosition = i;
+                }
+	        bigRays.push_back(rays[i]);
+        }
      }
 
 
-  
-       IplImage *badRaysScheme =
-       cvCreateImage (cvGetSize(colorImage), colorImage->depth,
-		   colorImage->nChannels);
-
- /*      for(int i=0;i<raysBadColor.size();i++)
-	{
-           cvLine(badRaysScheme, cvPoint(raysBadColor[i].p.x,raysBadColor[i].p.y),cvPoint(raysBadColor[i].q.x,raysBadColor[i].q.y), CV_RGB(0,255,0));
-	}
-
-       if(dark_on_light)
-       		cvSaveImage("lineTest_0.png",badRaysScheme);
-       else
-       		cvSaveImage("lineTest_1.png",badRaysScheme);
-       cvReleaseImage(&badRaysScheme);*/
-     
-
-/*    for(int j=0;j<rays.size();j++)
-     {
-
-      if (rays[j].points.size () >= 10)
-	{
-	    std::vector<Point3dFloat> rayColors;
-	    Point3dFloat color,mean;
-	    mean.x = mean.y = mean.z = 0;					
-	    for(int i=4;i<rays[j].points.size()-5;i++)
-	    {
-		    color.x = (float) CV_IMAGE_ELEM(colorImage, unsigned char, rays[j].points[i].y,
-	                                            (rays[j].points[i].x)*3);
-		    color.y = (float) CV_IMAGE_ELEM(colorImage, unsigned char, rays[j].points[i].y,
-	                                            (rays[j].points[i].x)*3+1);
-		    color.z = (float) CV_IMAGE_ELEM(colorImage, unsigned char, rays[j].points[i].y,
-	                                            (rays[j].points[i].x)*3+2);
-		    rayColors.push_back(color);
-
-		    mean.x += color.x;
-		    mean.y += color.y;
-		    mean.z += color.z;
-	    }
-             
-            mean.x = mean.x / ((float) rayColors.size());
-	    mean.y = mean.y / ((float) rayColors.size());
-	    mean.z = mean.z / ((float) rayColors.size());
-
-	    if(rayColors.size()>= 2)
-	    {
-		for(int i=0;i< rayColors.size();i++)
-		{
-                  if((abs(mean.x - rayColors[i].x) > 80)
-                      || (abs(mean.y - rayColors[i].y) > 80 ) 
-                      || ( abs(mean.z - rayColors[i].z) > 80))
-		   {
-			raysBadColor.push_back(rays[j]);
-			break;
-		   }
-		}
-	    }
-	}
-       }*/
-
-    std::vector<Ray> newRays;
-    std::vector<int> intersected(rays.size(),0);
-    std::vector< vector<int> > badRayIntersected;
 
     //initialize
-    for(int i=0;i<raysBadColor.size();i++)
+    for(int i=0;i<bigRays.size();i++)
     {
       vector<int> v;
       v.push_back(-1);
-      badRayIntersected.push_back(v);
+      bigRaysIntersected.push_back(v);
     }
 
+    // counting intersections
     for (int i =0; i< rays.size();i++)
     {
-      for(int k=0;k<raysBadColor.size();k++)
+      for(int k=0;k<bigRays.size();k++)
       {
-         if((rays[i].p.x == raysBadColor[k].p.x)&&(rays[i].p.y == raysBadColor[k].p.y)&&(rays[i].q.x == raysBadColor[k].q.x)&&
-	    (rays[i].q.y == raysBadColor[k].q.y))
+//         if((rays[i].p.x == bigRays[k].p.x)&&(rays[i].p.y == bigRays[k].p.y)&&(rays[i].q.x == bigRays[k].q.x)&&
+//	    (rays[i].q.y == bigRays[k].q.y))
+         if(i>= firstBigRayPosition)
 	 {
-           // it is a bad ray
+           // it is a big ray
 	   continue;
 	 }	
-         if(classifyIntersection(rays[i].p,rays[i].q,raysBadColor[k].p,raysBadColor[k].q))
+         if(classifyIntersection(rays[i].p,rays[i].q,bigRays[k].p,bigRays[k].q))
 	  {
-	    badRayIntersected[k].push_back(i);
+	    bigRaysIntersected[k].push_back(i);
 	    intersected[i]++;
 	  }
 		
       }
     }
-
-    #define INTERSECTIONS 2
     
     for (int i =0; i< rays.size();i++)
     {
         bool badRay = false;
         int badRayNum = -1;
-        for(int k=0;k<raysBadColor.size();k++)
+        /*for(int k=0;k<bigRays.size();k++)
         {
-          if((rays[i].p.x == raysBadColor[k].p.x)&&(rays[i].p.y == raysBadColor[k].p.y)&&(rays[i].q.x == raysBadColor[k].q.x)&&
-	     (rays[i].q.y == raysBadColor[k].q.y))
+          if((rays[i].p.x == bigRays[k].p.x)&&(rays[i].p.y == bigRays[k].p.y)&&(rays[i].q.x == bigRays[k].q.x)&&
+	     (rays[i].q.y == bigRays[k].q.y))
 	     {
 	 	badRay = true;
                 badRayNum = k;
                 break;
              }
-	}
+	}*/
+        if(i>=firstBigRayPosition)
+	{
+          badRay = true;
+          badRayNum = i-firstBigRayPosition;
+        }
       
 
       if((intersected[i]>=INTERSECTIONS)&&(!badRay))
@@ -950,9 +817,9 @@ strokeWidthTransform (IplImage * edgeImage,
       if(badRay)
       {
 	   bool plot = false;
-	   for (int m=1;m<badRayIntersected[badRayNum].size();m++)
+	   for (int m=1;m<bigRaysIntersected[badRayNum].size();m++)
 	   {
-           	if(intersected[badRayIntersected[badRayNum][m]] < INTERSECTIONS )
+           	if(intersected[bigRaysIntersected[badRayNum][m]] < INTERSECTIONS )
 	 		   plot = true;		
            }
 
@@ -1000,6 +867,7 @@ strokeWidthTransform (IplImage * edgeImage,
 void
 SWTMedianFilter (IplImage * SWTImage, std::vector < Ray > &rays)
 {
+  float median;
 
   for (std::vector < Ray >::iterator rit = rays.begin (); rit != rays.end ();
        rit++)
@@ -1010,8 +878,9 @@ SWTMedianFilter (IplImage * SWTImage, std::vector < Ray > &rays)
 	  pit->SWT = CV_IMAGE_ELEM (SWTImage, float, pit->y, pit->x);
 	}
       std::sort (rit->points.begin (), rit->points.end (), &Point2dSort);
-      float
-	median = (rit->points[rit->points.size () / 2]).SWT;
+      
+      median = (rit->points[rit->points.size () / 2]).SWT;
+      
       for (std::vector < Point2d >::iterator pit = rit->points.begin ();
 	   pit != rit->points.end (); pit++)
 	{
@@ -1223,6 +1092,7 @@ filterComponents (IplImage * SWTImage,
   compCenters.reserve (components.size ());
   compMedians.reserve (components.size ());
   compDimensions.reserve (components.size ());
+
   // bounding boxes
   compBB.reserve (components.size ());
   for (std::vector < std::vector < Point2d > >::iterator it =
@@ -1770,6 +1640,9 @@ main (int argc, char *argv[])
       return -1;
     }
 
+
+  std::vector < std::pair < CvPoint, CvPoint > >temp1, temp2, bb;
+
   int canny_low = atoi (argv[3]);
   int canny_high = atoi (argv[4]);
   float chain_strictness = atoi (argv[5]) / 100.0f;
@@ -1783,7 +1656,7 @@ main (int argc, char *argv[])
     "\n \t Max Color dist " << max_color_dist << std::endl;
 
 
-  IplImage *in1 = loadByteImage (argv[1]);
+  IplImage *in1 = cvLoadImage (argv[1]);
 
   // Creating zoomed images
   IplImage *in1_4 =
@@ -1806,6 +1679,7 @@ main (int argc, char *argv[])
     cvCreateImage (cvGetSize (in1_4), IPL_DEPTH_32F, 1);
   cvConvertScale (grayImage, gaussianImage, 1. / 255., 0);
   cvSmooth (gaussianImage, gaussianImage, CV_GAUSSIAN, 3, 3);
+
   IplImage *gradientX = cvCreateImage (cvGetSize (in1_4), IPL_DEPTH_32F, 1);
   IplImage *gradientY = cvCreateImage (cvGetSize (in1_4), IPL_DEPTH_32F, 1);
   cvSobel (gaussianImage, gradientX, 1, 0, CV_SCHARR);
@@ -1818,27 +1692,23 @@ main (int argc, char *argv[])
   cvReleaseImage (&grayImage);
 
 
-  if (!in1)
-    {
-      std::cout << "couldn't load query image" << std::endl;
-      return -1;
-    }
-  std::vector < std::pair < CvPoint, CvPoint > >temp1, temp2, bb;
-
-  temp1 = textDetection (in1_4, 1, grayImage, edgeImage, gradientX, gradientY,
+  temp1 = textDetection (in1_4, 1, edgeImage, gradientX, gradientY,
 			 (float) atoi (argv[5]) / 100.0,
 			 (float) atoi (argv[6]) / 100.0,
 			 (float) atoi (argv[7]));
   temp2 =
-    textDetection (in1_4, 0, grayImage, edgeImage, gradientX, gradientY,
+    textDetection (in1_4, 0, edgeImage, gradientX, gradientY,
 		   (float) atoi (argv[5]) / 100.0,
 		   (float) atoi (argv[6]) / 100.0, (float) atoi (argv[7]));
 
+
+  temp1.resize(temp1.size()+temp2.size());
 
   for (int i = 0; i < temp2.size (); i++)
     {
       temp1.push_back (temp2[i]);
     }
+
   bb = mergeBoundingBoxes (temp1, cvGetSize (in1_4));
 
   for (std::vector < std::pair < CvPoint, CvPoint > >::iterator it =
@@ -1849,6 +1719,9 @@ main (int argc, char *argv[])
 
   cvResize (in1_4, in1);
   cvSaveImage (argv[2], in1);
+
+
+
   cvReleaseImage (&in1);
   cvReleaseImage (&in1_4);
   cvReleaseImage (&gradientX);

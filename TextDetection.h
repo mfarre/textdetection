@@ -58,11 +58,9 @@ struct Chain {
 bool Point2dSort (Point2d const & lhs,
                   Point2d const & rhs);
 
-IplImage * loadByteImage ( const char * name );
-
 std::vector < std::pair < CvPoint, CvPoint > >
 textDetection (IplImage * in, bool dark_on_light,
-	       IplImage * grayImage, IplImage * edgeImage,
+	       IplImage * edgeImage,
 	       IplImage * gradientX, IplImage * gradientY,
 	       float chain_strictness_pi,
 	       float denom_pi_swt_acceptation_angle, float max_color_dist);
